@@ -107,7 +107,7 @@ If you run the scipt without any parameter or using the `-h` or `--help` flag, y
 
 ### Default 
 
-You can use the `--default` or `-d` flag to run the script with default options. The default options are the following:
+You can use the `--default` or `-D` flag to run the script with default options. The default options are the following:
 - Path of the project (`-p` or `--path`): `./`
 - Project name (`-n` or `--name`): `test_project` 
 - Nmap output folder (`-s` or `--scan-dir`): `[PROJECT_FOLDER]/Nmap_Scans` 
