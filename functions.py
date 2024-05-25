@@ -7,7 +7,7 @@ import pwd
 import grp
 import xml.etree.ElementTree as ET
 
-# Set UID to original user so folder and files are accessible
+# Set UID to original user so folders and files are accessible
 def drop_privileges(uid_name='SUDO_UID', gid_name='SUDO_GID'):
     if uid_name in os.environ and gid_name in os.environ:
         new_uid = int(os.environ[uid_name])
@@ -34,7 +34,7 @@ def get_current_user_and_group():
     group_name = grp.getgrgid(group_id).gr_name
     return user_name, group_name
 
-# Change ownershif of a file/directory
+# Change ownership of a file/directory
 def change_owner(path, user, group):
     try:
         uid = pwd.getpwnam(user).pw_uid
