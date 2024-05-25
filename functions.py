@@ -114,7 +114,6 @@ def search_files_with_names_recursive(directory=".", filename="", value=0):
         else:
             return "\n\n"
 
-# TODO CHANGE TO -p-
 # Run a classic TCP nmap scan
 def launch_tcp_nmap(target, flags="", folder="Nmap_Scans"):
     # Ensure the output directory exists
@@ -122,7 +121,7 @@ def launch_tcp_nmap(target, flags="", folder="Nmap_Scans"):
 
     # Launch basic nmap scan
     if flags == "":
-        arguments='-vv -Pn --min-rate 1000 -p 21-450 -sV -sC '
+        arguments='-vv -Pn --min-rate 1000 -p- -sV -sC '
     else:
         arguments=flags
     if "-sC" not in arguments and "-sV" not in arguments:
@@ -145,15 +144,14 @@ def launch_tcp_nmap(target, flags="", folder="Nmap_Scans"):
             return "\n\n"
     else:
         return open(folder + "/nmap_tcp_" + target+".nmap").read()
-
-# TODO CHANGE TO --top-ports 1000
+        
 # Run a classic UDP nmap scan
 def launch_udp_nmap(target, flags="", folder="Nmap_Scans"):
     # Ensure the output directory exists
     os.makedirs(folder, exist_ok=True)
     # Launch basic nmap scan
     if flags == "":
-        arguments='-vv -Pn --min-rate 1000 -sU --top-ports 10 -sV -sC '
+        arguments='-vv -Pn --min-rate 1000 -sU --top-ports 1000 -sV -sC '
     else:
         arguments=flags
 
