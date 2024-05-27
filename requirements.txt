@@ -1,5 +1,2 @@
-regex
-glob2
 shcheck
-python-libnmap
 alive-progress
