@@ -1,6 +1,5 @@
 import os
 from functions import *
-from libnmap.parser import NmapParser
 import argparse
 from alive_progress import alive_bar
 import sys
