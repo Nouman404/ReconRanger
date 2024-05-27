@@ -1,6 +1,5 @@
 import re
 import socket
-import glob
 import os
 import subprocess
 import pwd
@@ -16,16 +15,8 @@ def drop_privileges(uid_name='SUDO_UID', gid_name='SUDO_GID'):
         os.setgroups([])
         os.setgid(new_gid)
         os.setuid(new_uid)
-        """
-        if os.getuid() == new_uid and os.getgid() == new_gid:
-            print(f"Dropped privileges to UID: {new_uid}, GID: {new_gid}")
-        else:
-            print("Failed to drop privileges")
-            sys.exit(1)
-        """
     else:
         print("Could not find UID and GID in environment")
-        #sys.exit(1)
 
 def get_current_user_and_group():
     user_id = os.getuid()
@@ -47,72 +38,6 @@ def change_owner(path, user, group):
 # Check if the format looks like an IP or not (domain)
 def isIP(value):
     return re.search("[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}", value)
-
-# Check recursively in a folder to get the nmap results
-def search_files_with_names_recursive(directory=".", filename="", value=0):
-    unresolved_list = []
-    # Value of 0 == search for an IP or domain and print result
-    if value == 0:
-        # Open the file "list" for reading
-        with open(filename, "r") as file:
-            # Read each line from the file
-            for line in file:
-                # Remove trailing newline characters
-                search_term = line.strip()
-
-                # If domain instead of IP then resolve
-                if not isIP(search_term):
-                    try:
-                        search_term = socket.gethostbyname(search_term)
-                    except:
-                        # May return too much strings 
-                        # print("[-] Couldn't resolve " + search_term)
-                        unresolved_list.append(search_term)
-                        continue
-
-                # Search for files with matching names in the current directory and its subdirectories
-                search_pattern = os.path.join(directory, "**", f"*{search_term}[a-zA-Z.-_]*")
-                
-                found_files = glob.glob(search_pattern, recursive=True)
-                if found_files:
-                    print(f"Found file(s) containing '{line.strip()}' in directory '{directory}':")
-                    for found_file in found_files:
-                        print(found_file)
-                        
-                        
-                else:
-                    pass
-
-            # Write unresolved domains to a file
-            with open("unresolved.txt", "w") as file2:
-                for line in unresolved_list:
-                    file2.write(line + "\n")
-            print("[+] Result of domains not resolved saved in 'unresolved.txt'")
-    # Value of 1 == search for an IP or domain and return result
-    else:
-        search_term = filename.strip()
-
-        # If domain instead of IP then resolve
-        if not isIP(search_term):
-            try:
-                search_term = socket.gethostbyname(search_term)
-            except:
-                # May return too much strings 
-                # print("[-] Couldn't resolve " + search_term)
-                return "\n\n"
-
-        # Search for files with matching names in the current directory and its subdirectories
-        search_pattern = os.path.join(directory, "**", f"*{search_term}[a-zA-Z.-_]*")
-                
-        found_files = glob.glob(search_pattern, recursive=True)
-        if found_files:
-            #print(f"Found file(s) containing '{line.strip()}' in directory '{directory}':")
-            for found_file in found_files:
-                #print(found_file)
-                if re.search("\.nmap$", found_file):
-                    return found_file
-        else:
-            return "\n\n"
 
 # Run a classic TCP nmap scan
 def launch_tcp_nmap(target, flags="", folder="Nmap_Scans"):
