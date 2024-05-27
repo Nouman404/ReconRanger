@@ -4,7 +4,7 @@ import argparse
 from alive_progress import alive_bar
 import sys
 
-def create_markdown_files(path="./", folder_name="project_name", hosts_file="hosts.txt", scan_folder="Nmap_Scan", existing_folder=False, udp_flags="" , tcp_flags="", ssl_folder="Test_SSL", scan_type="native", header_folder="Headers_Check", user_group=":"):
+def create_markdown_files(path="./", folder_name="project_name", hosts_file="hosts.txt", scan_folder="Nmap_Scans", udp_flags="" , tcp_flags="", ssl_folder="Test_SSL", scan_type="native", header_folder="Headers_Check", user_group=":"):
     with alive_bar(title='Processing...', spinner='arrows_in', length=40) as bar:
         # Create the folder if it doesn't exist
         if not os.path.exists(path+"/"+folder_name):
@@ -15,13 +15,11 @@ def create_markdown_files(path="./", folder_name="project_name", hosts_file="hos
             folder_name = path+"/"+folder_name
         
         folder_name = os.path.normpath(folder_name)
-        
-        if existing_folder == False:
-            scan_folder = os.path.normpath(folder_name +"/"+ scan_folder)
 
         ssl_folder = os.path.normpath(folder_name + "/"+ ssl_folder)
         header_folder = os.path.normpath(folder_name + "/"+ header_folder)
-
+        scan_folder = os.path.normpath(folder_name + "/"+ scan_folder)
+        
         if not os.path.exists(hosts_file):
             print("[-] Host file not present")
             exit(1)
@@ -139,7 +137,7 @@ def main():
     if args.default:
         create_markdown_files()
     else:
-        if args.help or len(sys.argv) == 1:
+        if args.help or len(sys.argv) == 3:
             help_menu()
         if args.path:
             output_dir = args.path
@@ -155,11 +153,6 @@ def main():
             scan_dir = args.scan_dir
         else:
             scan_dir = "./Nmap_Scans"
-
-        if args.existing_folder:
-            existing_folder = True
-        else:
-            existing_folder = False
 
         if args.tcp_flags:
             tcp_flags = ' '.join(args.tcp_flags)
@@ -196,7 +189,7 @@ def main():
         else:
             user_group = ":"
 
-    create_markdown_files(path=output_dir, folder_name=project_name, hosts_file=host_file, scan_folder=scan_dir, existing_folder=existing_folder, udp_flags=udp_flags, tcp_flags=tcp_flags, ssl_folder=ssl_folder, scan_type=scan_type, header_folder=header_folder, user_group=user_group)
+    create_markdown_files(path=output_dir, folder_name=project_name, hosts_file=host_file, scan_folder=scan_dir, udp_flags=udp_flags, tcp_flags=tcp_flags, ssl_folder=ssl_folder, scan_type=scan_type, header_folder=header_folder, user_group=user_group)
 
 if __name__ == "__main__":
     main()
