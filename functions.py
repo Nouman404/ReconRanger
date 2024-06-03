@@ -267,7 +267,7 @@ def extract_open_http_ports(xml_file):
             if state == 'open':
                 # Check if the service is 'http'
                 service = port.find('service')
-                if service is not None and service.get('name') == 'http':
+                if service is not None and (service.get('name') == 'http' or service.get('name') == 'https'):
                     if service.get("tunnel") == "ssl":
                         web_ports.append({"https":port.get("portid")})
                     else:
