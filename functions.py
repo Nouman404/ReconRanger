@@ -176,7 +176,7 @@ def run_testssl_native(target, output_dir="Test_SSL", port="443"):
     content_to_save_vuln = ""
     content_to_save_rating = ""
 
-    if result.returncode == 0:
+    if result.returncode >= 0 and os.path.exists(f'{output_dir}/testssl_{target}.log'):
         file = open(f'{output_dir}/testssl_{target}.log').readlines()
         for line in file:
             if "Testing vulnerabilities" in line:
