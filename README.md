@@ -137,6 +137,10 @@ You can use the `--default` or `-D` flag to run the script with default options.
 
 You can modify any of the input used by the program by using the simple flags `-X` or long flags `--XYZ`. Be aware that the flags that can take a string as argument (flags for Nmap TCP/UDP) need the `=` sign to work. So, `-sT -p 10-1000` won't work if you want to scan the port from 10 to 1000. Instead you will have to run `-sT="-p 10-1000"` 
 
+## TODO
+
+- [ ] Improve Progress bar
+- [ ] Add skip UDP scan mode
 
 ## LICENCE
 
