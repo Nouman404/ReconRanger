@@ -100,7 +100,7 @@ If you run the scipt without any parameter or using the `-h` or `--help` flag, y
       -s, --scan-dir            Folder name for the nmap output folder (default: "./Nmap_Scans")
       -sU, --udp-flags          Specify your own nmap flags for UDP scan (default: "-vv -Pn --min-rate 1000 -sU --top-ports 1000 -sV -sC")
       -sT, --tcp-flags          Specify your own nmap flags for TCP scan (default: "-vv -Pn --min-rate 1000 -p- -sV -sC")
-      -eF, --existing-folder    The path you specified for the Nmap folder already has the scans and won't launch new ones
+      -xU, --exclude-udp        Exclude UDP scan from the report (default: False)
 
     TestSSL Options:  
       -S, --ssl                 Folder name for the SSL check output folder (default: "./Test_SSL")

@@ -4,7 +4,7 @@ import argparse
 from alive_progress import alive_bar
 import sys
 
-def create_markdown_files(path="./", folder_name="project_name", hosts_file="hosts.txt", scan_folder="Nmap_Scans", udp_flags="" , tcp_flags="", ssl_folder="Test_SSL", scan_type="native", header_folder="Headers_Check", user_group=":"):
+def create_markdown_files(path="./", folder_name="project_name", hosts_file="hosts.txt", scan_folder="Nmap_Scans", udp_flags="" , tcp_flags="", exclude_udp=False, ssl_folder="Test_SSL", scan_type="native", header_folder="Headers_Check", user_group=":"):
     with alive_bar(title='Processing...', spinner='arrows_in', length=40) as bar:
         # Create the folder if it doesn't exist
         if not os.path.exists(path+"/"+folder_name):
@@ -33,9 +33,9 @@ def create_markdown_files(path="./", folder_name="project_name", hosts_file="hos
                 # Skip empty lines or lines starting with #
                 if not domain or domain.startswith("#"):
                     continue
-
                 # Run Nmap scan
-                udp_nmap = launch_udp_nmap(target=domain, flags=udp_flags ,folder=scan_folder)                
+                if not exclude_udp:
+                    udp_nmap = launch_udp_nmap(target=domain, flags=udp_flags ,folder=scan_folder)             
                 tcp_nmap = launch_tcp_nmap(target=domain, flags=tcp_flags ,folder=scan_folder)
                 # Check if a web port is open http and/or https to display or not the "Test HTTP Header" section
                 value_of_web_port = extract_open_http_ports(scan_folder+"/nmap_tcp_"+domain+".xml")
@@ -69,6 +69,7 @@ def create_markdown_files(path="./", folder_name="project_name", hosts_file="hos
                             full_rating += "\n---------------------\nHTTPS on port " + https_port + "\n---------------------\n" + rating 
                             test_ssl = ""
                             rating = ""
+                        https_port = ""
 
 
                 # Create the markdown file
@@ -82,11 +83,11 @@ def create_markdown_files(path="./", folder_name="project_name", hosts_file="hos
                     md_file.write("```")
                     md_file.write(tcp_nmap)
                     md_file.write("```\n\n")
-
-                    md_file.write("# UDP\n\n")
-                    md_file.write("```")
-                    md_file.write(udp_nmap)
-                    md_file.write("```\n\n")
+                    if not exclude_udp:
+                        md_file.write("# UDP\n\n")
+                        md_file.write("```")
+                        md_file.write(udp_nmap)
+                        md_file.write("```\n\n")
 
                     md_file.write("# FFuF / Gobuster\n\n")
                     md_file.write("```\n\n```\n\n")
@@ -97,12 +98,12 @@ def create_markdown_files(path="./", folder_name="project_name", hosts_file="hos
                         md_file.write(headers)
                         md_file.write("```\n\n")
 
-                    if https_port != "":
+                    if full_rating != "":
                         md_file.write("# Test SSL\n\n")
                         md_file.write("```\n")
                         md_file.write(full_rating)
                         md_file.write("```\n\n")
-                    
+                    if full_test_ssl != "":
                         md_file.write("## SSL linked CVE\n\n")
                         md_file.write("```\n")
                         md_file.write(full_test_ssl)
@@ -127,6 +128,7 @@ def main():
     parser.add_argument("-s", "--scan-dir", default="./Nmap_Scans", help='Folder name for the nmap output folder (default: "./Nmap_Scans")')
     parser.add_argument("-sU", "--udp-flags", nargs='+', help='Specify your own nmap flags for UDP scan')
     parser.add_argument("-sT", "--tcp-flags", nargs='+', help='Specify your own nmap flags for TCP scan')
+    parser.add_argument("-xU", "--exclude-udp", action="store_true", default="", help='Exclude UDP scan')
     parser.add_argument("-H", "--host-file", default="./hosts.txt", help='Name of the host file (default: "./hosts.txt")')
     parser.add_argument("-S", "--ssl", default="./Test_SSL", help='Folder name for the SSL check output folder (default: "./Test_SSL")')
     parser.add_argument("-St", "--scan-type", choices=["docker", "native"], help='Use either "docker" or "native" to either run a docker container for the testssl or run it from binary.')
@@ -164,6 +166,11 @@ def main():
         else:
             udp_flags = ""
 
+        if args.exclude_udp:
+            exclude_udp = True
+        else:
+            exclude_udp = False
+
         if args.host_file:
             host_file = args.host_file
         else:
@@ -189,7 +196,7 @@ def main():
         else:
             user_group = ":"
 
-    create_markdown_files(path=output_dir, folder_name=project_name, hosts_file=host_file, scan_folder=scan_dir, udp_flags=udp_flags, tcp_flags=tcp_flags, ssl_folder=ssl_folder, scan_type=scan_type, header_folder=header_folder, user_group=user_group)
+    create_markdown_files(path=output_dir, folder_name=project_name, hosts_file=host_file, scan_folder=scan_dir, udp_flags=udp_flags, tcp_flags=tcp_flags, exclude_udp=exclude_udp, ssl_folder=ssl_folder, scan_type=scan_type, header_folder=header_folder, user_group=user_group)
 
 if __name__ == "__main__":
     main()
