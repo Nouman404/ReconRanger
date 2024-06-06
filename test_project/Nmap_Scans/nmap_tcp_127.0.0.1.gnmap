@@ -1,4 +1,0 @@
-# Nmap 7.80 scan initiated Fri May 24 23:15:03 2024 as: nmap -p 8000-8003 -sC -sV -oA test_project/Nmap_Scans/nmap_tcp_127.0.0.1 127.0.0.1
-Host: 127.0.0.1 (localhost)	Status: Up
-Host: 127.0.0.1 (localhost)	Ports: 8000/closed/tcp//http-alt///, 8001/open/tcp//ssl|http//SimpleHTTPServer 0.6 (Python 3.10.12)/, 8002/open/tcp//ssl|http//SimpleHTTPServer 0.6 (Python 3.10.12)/, 8003/closed/tcp//mcreport///
-# Nmap done at Fri May 24 23:15:23 2024 -- 1 IP address (1 host up) scanned in 19.97 seconds

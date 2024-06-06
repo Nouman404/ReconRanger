@@ -113,7 +113,7 @@ def run_testssl_docker(target, output_dir="Test_SSL", port="443"):
         'sudo', 'docker', 'run', '--rm',
         '-v', f"{os.path.abspath(output_dir)}:/ssl",
         '--user', f"{uid}:{gid}",
-        'drwetter/testssl.sh','--color', '0' , '--logfile', f"/ssl/testssl_{target}.log", target
+        'drwetter/testssl.sh','--color', '0', '--overwrite', '--logfile', f"/ssl/testssl_{target}.log", target
     ]
     
     result = subprocess.run(command, capture_output=True, text=True)
@@ -125,6 +125,8 @@ def run_testssl_docker(target, output_dir="Test_SSL", port="443"):
     if result.returncode == 0:
         file = open(f'{output_dir}/testssl_{target}.log').readlines()
         for line in file:
+            if 'Could not determine the protocol, only simulating generic clients.' in line:
+                continue
             if "Testing vulnerabilities" in line:
                 content_to_save_vuln += line
                 test_vuln = 1
@@ -169,7 +171,7 @@ def run_testssl_native(target, output_dir="Test_SSL", port="443"):
     if port != "443":
         target += ":"+port
 
-    command = ['./testssl.sh/testssl.sh','--color', '0' , '--logfile', f'{output_dir}/testssl_{target}.log', target]
+    command = ['./testssl.sh/testssl.sh','--color', '0', '--overwrite', '--logfile', f'{output_dir}/testssl_{target}.log', target]
     result = subprocess.run(command, capture_output=True, text=True)
     test_vuln = 0
     rating = 0
@@ -179,6 +181,8 @@ def run_testssl_native(target, output_dir="Test_SSL", port="443"):
     if result.returncode >= 0 and os.path.exists(f'{output_dir}/testssl_{target}.log'):
         file = open(f'{output_dir}/testssl_{target}.log').readlines()
         for line in file:
+            if 'Could not determine the protocol, only simulating generic clients.' in line:
+                continue
             if "Testing vulnerabilities" in line:
                 content_to_save_vuln += line
                 test_vuln = 1
@@ -220,8 +224,10 @@ def run_shcheck(target, type="https", output_dir="Headers_Check", port=""):
     
     if result.returncode == 0:
         #print(result.stdout)
-        with open(output_dir+"/header_"+target, "w") as file:
+        with open(output_dir+"/header_"+target, "w+") as file:
             file.write(result.stdout)
+            if len(file.readlines()) == 0:
+                return ""
         return result.stdout
     else:
         print(f'Error: {result.stderr}')
@@ -293,7 +299,7 @@ def help_menu():
       -s, --scan-dir            Folder name for the nmap output folder (default: "./Nmap_Scans")
       -sU, --udp-flags          Specify your own nmap flags for UDP scan (default: "-vv -Pn --min-rate 1000 -sU --top-ports 1000 -sV -sC")
       -sT, --tcp-flags          Specify your own nmap flags for TCP scan (default: "-vv -Pn --min-rate 1000 -p- -sV -sC")
-      -eF, --existing-folder    The path you specified for the Nmap folder already has the scans and won't launch new ones
+      -xU, --exclude-udp        Exclude UDP scan from the report (default: False)
 
     TestSSL Options:  
       -S, --ssl                 Folder name for the SSL check output folder (default: "./Test_SSL")
