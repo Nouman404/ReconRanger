@@ -140,7 +140,7 @@ You can modify any of the input used by the program by using the simple flags `-
 ## TODO
 
 - [ ] Improve Progress bar
-- [ ] Add skip UDP scan mode
+- [ ] Remove "http" / "https" and final "/" if URL given instead of FQDN
 
 ## LICENCE
 
