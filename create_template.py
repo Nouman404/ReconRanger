@@ -39,6 +39,7 @@ def create_markdown_files(path="./", folder_name="project_name", hosts_file="hos
                 tcp_nmap = launch_tcp_nmap(target=domain, flags=tcp_flags ,folder=scan_folder)
                 # Check if a web port is open http and/or https to display or not the "Test HTTP Header" section
                 value_of_web_port = extract_open_http_ports(scan_folder+"/nmap_tcp_"+domain+".xml")
+
                 headers = ""
                 port =""
                 https_port =  ""

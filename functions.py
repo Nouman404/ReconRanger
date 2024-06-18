@@ -113,7 +113,7 @@ def run_testssl_docker(target, output_dir="Test_SSL", port="443"):
         'sudo', 'docker', 'run', '--rm',
         '-v', f"{os.path.abspath(output_dir)}:/ssl",
         '--user', f"{uid}:{gid}",
-        'drwetter/testssl.sh','--color', '0', '--overwrite', '--logfile', f"/ssl/testssl_{target}.log", target
+        'drwetter/testssl.sh','--color', '0', '--warnings', 'off' ,'--overwrite', '--logfile', f"/ssl/testssl_{target}.log", target
     ]
     
     result = subprocess.run(command, capture_output=True, text=True)
@@ -171,7 +171,7 @@ def run_testssl_native(target, output_dir="Test_SSL", port="443"):
     if port != "443":
         target += ":"+port
 
-    command = ['./testssl.sh/testssl.sh','--color', '0', '--overwrite', '--logfile', f'{output_dir}/testssl_{target}.log', target]
+    command = ['./testssl.sh/testssl.sh','--color', '0', '--overwrite', '--warnings', 'off', '--logfile', f'{output_dir}/testssl_{target}.log', target]
     result = subprocess.run(command, capture_output=True, text=True)
     test_vuln = 0
     rating = 0
@@ -273,11 +273,10 @@ def extract_open_http_ports(xml_file):
             if state == 'open':
                 # Check if the service is 'http'
                 service = port.find('service')
-                if service is not None and (service.get('name') == 'http' or service.get('name') == 'https'):
-                    if service.get("tunnel") == "ssl":
-                        web_ports.append({"https":port.get("portid")})
-                    else:
-                        web_ports.append({"http":port.get("portid")})
+                if service.get("tunnel") == "ssl":
+                    web_ports.append({"https":portid})
+                else:
+                    web_ports.append({"http":portid})
     return web_ports
 
 
@@ -296,17 +295,17 @@ def help_menu():
       -H, --host_file           Name of the host file (default: "./hosts.txt")
 
     Nmap Options:
-      -s, --scan-dir            Folder name for the nmap output folder (default: "./Nmap_Scans")
+      -s, --scan-dir            Folder name for the nmap output folder (default: "[PROJECT_FOLDER]/Nmap_Scans")
       -sU, --udp-flags          Specify your own nmap flags for UDP scan (default: "-vv -Pn --min-rate 1000 -sU --top-ports 1000 -sV -sC")
       -sT, --tcp-flags          Specify your own nmap flags for TCP scan (default: "-vv -Pn --min-rate 1000 -p- -sV -sC")
       -xU, --exclude-udp        Exclude UDP scan from the report (default: False)
 
     TestSSL Options:  
-      -S, --ssl                 Folder name for the SSL check output folder (default: "./Test_SSL")
+      -S, --ssl                 Folder name for the SSL check output folder (default: "[PROJECT_FOLDER]/Test_SSL")
       -St, --scan-type          User either "docker" or "native" to either run a docker container for the testssl or run it from binary.
     
     Header Check Options:
-      -He, --header-folder     Folder name for the HTTP header check (default: "./Headers_Check")
+      -He, --header-folder     Folder name for the HTTP header check (default: "[PROJECT_FOLDER]/Headers_Check")
 
 
     Examples:

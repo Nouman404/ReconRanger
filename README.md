@@ -97,17 +97,17 @@ If you run the scipt without any parameter or using the `-h` or `--help` flag, y
       -H, --host_file           Name of the host file (default: "./hosts.txt")
 
     Nmap Options:
-      -s, --scan-dir            Folder name for the nmap output folder (default: "./Nmap_Scans")
+      -s, --scan-dir            Folder name for the nmap output folder (default: "[PROJECT_FOLDER]/Nmap_Scans")
       -sU, --udp-flags          Specify your own nmap flags for UDP scan (default: "-vv -Pn --min-rate 1000 -sU --top-ports 1000 -sV -sC")
       -sT, --tcp-flags          Specify your own nmap flags for TCP scan (default: "-vv -Pn --min-rate 1000 -p- -sV -sC")
       -xU, --exclude-udp        Exclude UDP scan from the report (default: False)
 
     TestSSL Options:  
-      -S, --ssl                 Folder name for the SSL check output folder (default: "./Test_SSL")
+      -S, --ssl                 Folder name for the SSL check output folder (default: "[PROJECT_FOLDER]/Test_SSL")
       -St, --scan-type          User either "docker" or "native" to either run a docker container for the testssl or run it from binary.
     
     Header Check Options:
-      -He, --header-folder     Folder name for the HTTP header check (default: "./Headers_Check")
+      -He, --header-folder     Folder name for the HTTP header check (default: "[PROJECT_FOLDER]/Headers_Check")
 
 
     Examples:
@@ -128,8 +128,9 @@ You can use the `--default` or `-D` flag to run the script with default options.
 - Nmap output folder (`-s` or `--scan-dir`): `[PROJECT_FOLDER]/Nmap_Scans` 
 - Nmap UDP flags (`-sU` or `--udp-flags`): `-vv -Pn --min-rate 1000 -sU --top-ports 1000 -sV -sC -oA [PROJECT_FOLDER]/[NMAP_FOLDER]/nmap_tcp_DOMAIN_OR_IP`
 - Nmap TCP flags (`-sT` or `--tcp-flags`): `-vv -Pn --min-rate 1000 -p- -sV -sC -oA [PROJECT_FOLDER]/[NMAP_FOLDER]/nmap_tcp_DOMAIN_OR_IP`
+- Exlude UDP scans (`-xU`, `--exclude-udp`): `False` (No need to specify True after using this flag)
 - Host file (`-H`, `--host-file`): `./hosts.txt`
-- Test SSL folder (`-S`, `--ssl`): `./Test_SSL`
+- Test SSL folder (`-S`, `--ssl`): `[PROJECT_FOLDER]/Test_SSL`
 - Header scan type (`-sT`, `--scan-type`): `native`
 - Header folder (`-He`, `--user-group`): `./Headers_Check`
 
@@ -140,7 +141,7 @@ You can modify any of the input used by the program by using the simple flags `-
 ## TODO
 
 - [ ] Improve Progress bar
-- [ ] Remove "http" / "https" and final "/" if URL given instead of FQDN
+- [ ] Add skip UDP scan mode
 
 ## LICENCE
 
