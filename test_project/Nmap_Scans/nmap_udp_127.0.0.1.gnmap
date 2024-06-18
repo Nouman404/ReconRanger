@@ -1,0 +1,5 @@
+# Nmap 7.80 scan initiated Fri May 24 23:13:09 2024 as: nmap -vv -Pn --min-rate 1000 -sU --top-ports 10 -sV -sC -oA test_project/Nmap_Scans/nmap_udp_127.0.0.1 127.0.0.1
+# Ports scanned: TCP(0;) UDP(10;53,67,123,135,137-138,161,445,631,1434) SCTP(0;) PROTOCOLS(0;)
+Host: 127.0.0.1 (localhost)	Status: Up
+Host: 127.0.0.1 (localhost)	Ports: 53/closed/udp//domain///, 67/closed/udp//dhcps///, 123/closed/udp//ntp///, 135/closed/udp//msrpc///, 137/closed/udp//netbios-ns///, 138/closed/udp//netbios-dgm///, 161/closed/udp//snmp///, 445/closed/udp//microsoft-ds///, 631/open|filtered/udp//ipp///, 1434/closed/udp//ms-sql-m///
+# Nmap done at Fri May 24 23:15:03 2024 -- 1 IP address (1 host up) scanned in 113.33 seconds
