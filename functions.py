@@ -133,10 +133,10 @@ def run_testssl_docker(target, output_dir="Test_SSL", port="443"):
             if "Running client simulations" in line:
                 test_vuln = 0
             if test_vuln == 1 and "Testing vulnerabilities" not in line:
-                if "(OK)" not in line and len(line) > 1:
+                if "(OK)" not in line and len(line) > 1 and line[1].isalpha():
                     content_to_save_vuln += "[-] " + line
                 else:
-                    if len(line) > 1:
+                    if len(line) > 1 and line[1].isalpha():
                         content_to_save_vuln += "[+] " + line
                     else:
                         content_to_save_vuln += line
@@ -189,10 +189,10 @@ def run_testssl_native(target, output_dir="Test_SSL", port="443"):
             if "Running client simulations" in line:
                 test_vuln = 0
             if test_vuln == 1 and "Testing vulnerabilities" not in line:
-                if "(OK)" not in line and len(line) > 1:
+                if "(OK)" not in line and len(line) > 1 and line[1].isalpha():
                     content_to_save_vuln += "[-] " + line
                 else:
-                    if len(line) > 1:
+                    if len(line) > 1 and line[1].isalpha():
                         content_to_save_vuln += "[+] " + line
                     else:
                         content_to_save_vuln += line
