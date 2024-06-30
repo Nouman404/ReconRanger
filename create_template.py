@@ -1,124 +1,133 @@
 import os
 from functions import *
 import argparse
-from alive_progress import alive_bar
+from halo import Halo
 import sys
 
 def create_markdown_files(path="./", folder_name="project_name", hosts_file="hosts.txt", scan_folder="Nmap_Scans", udp_flags="" , tcp_flags="", exclude_udp=False, ssl_folder="Test_SSL", scan_type="native", header_folder="Headers_Check", user_group=":"):
-    with alive_bar(title='Processing...', spinner='arrows_in', length=40) as bar:
-        # Create the folder if it doesn't exist
-        if not os.path.exists(path+"/"+folder_name):
-            folder_name = path+"/"+folder_name
-            os.makedirs(folder_name)
-            os.makedirs(folder_name+"/"+"Photos")
-        else:
-            folder_name = path+"/"+folder_name
+    # Create the folder if it doesn't exist
+    if not os.path.exists(path+"/"+folder_name):
+        folder_name = path+"/"+folder_name
+        os.makedirs(folder_name)
+        os.makedirs(folder_name+"/"+"Photos")
+    else:
+        folder_name = path+"/"+folder_name
         
-        folder_name = os.path.normpath(folder_name)
+    folder_name = os.path.normpath(folder_name)
 
-        ssl_folder = os.path.normpath(folder_name + "/"+ ssl_folder)
-        header_folder = os.path.normpath(folder_name + "/"+ header_folder)
-        scan_folder = os.path.normpath(folder_name + "/"+ scan_folder)
+    ssl_folder = os.path.normpath(folder_name + "/"+ ssl_folder)
+    header_folder = os.path.normpath(folder_name + "/"+ header_folder)
+    scan_folder = os.path.normpath(folder_name + "/"+ scan_folder)
         
-        if not os.path.exists(hosts_file):
-            print("[-] Host file not present")
-            exit(1)
+    if not os.path.exists(hosts_file):
+        print("[-] Host file not present")
+        exit(1)
 
-        # Read the hosts.txt file
-        with open(hosts_file, "r") as file:
-            # Read each line from the file
-            for line in file:
-                # Remove leading and trailing whitespace
-                domain = line.strip()
-                # Skip empty lines or lines starting with #
-                if not domain or domain.startswith("#"):
-                    continue
-                # Run Nmap scan
-                if not exclude_udp:
-                    udp_nmap = launch_udp_nmap(target=domain, flags=udp_flags ,folder=scan_folder)             
-                tcp_nmap = launch_tcp_nmap(target=domain, flags=tcp_flags ,folder=scan_folder)
-                # Check if a web port is open http and/or https to display or not the "Test HTTP Header" section
-                value_of_web_port = extract_open_http_ports(scan_folder+"/nmap_tcp_"+domain+".xml")
+    # Read the hosts.txt file
+    with open(hosts_file, "r") as file:
+        # Read each line from the file
+        for line in file:
+            # Remove leading and trailing whitespace
+            domain = line.strip()
+            
+            # Skip empty lines or lines starting with #
+            if not domain or domain.startswith("#"):
+                continue
+            
+            spinner = Halo(text=f'Scanning {domain}', spinner='dots')
+            spinner.start()
 
-                headers = ""
-                port =""
-                https_port =  ""
-                full_test_ssl = ""
-                full_rating = ""
-                test_ssl, rating = "", ""
-                for value in value_of_web_port:
-                    if "https" in value:
-                        # Run Header check on HTTPS
-                        headers += run_shcheck(target=domain, type="https", output_dir=header_folder, port=value["https"])
-                        https_port = value["https"]
-                    else:
-                        if "http" in value:
-                            port = value["http"]
-                            headers += run_shcheck(target=domain, type="http", output_dir=header_folder, port=port)
-                        else:
-                            print(value)
+            # Run Nmap scan
+            if not exclude_udp:
+                udp_nmap = launch_udp_nmap(target=domain, flags=udp_flags ,folder=scan_folder)             
+            tcp_nmap = launch_tcp_nmap(target=domain, flags=tcp_flags ,folder=scan_folder)
+            # Check if a web port is open http and/or https to display or not the "Test HTTP Header" section
+            value_of_web_port = extract_open_http_ports(scan_folder+"/nmap_tcp_"+domain+".xml")
+
+            headers = ""
+            port =""
+            https_port =  ""
+            full_test_ssl = ""
+            full_rating = ""
+            test_ssl, rating = "", ""
+            cookies_check_sec = ""
+            for value in value_of_web_port:
+                if "https" in value:
+                    # Run Header check on HTTPS
+                    https_port = value["https"]
+                    headers += run_my_header_check(target=domain, my_type="https", output_dir=header_folder, port=https_port)
+                    cookies_check_sec += get_cookies_sec(target=domain, my_type="https", port=https_port)
+                else:
+                    if "http" in value:
+                        port = value["http"]
+                        headers += run_my_header_check(target=domain, my_type="http", output_dir=header_folder, port=port)
+                        cookies_check_sec += get_cookies_sec(target=domain, my_type="http", port=port)
                     # Run Certificate check on HTTPS
-                    if https_port != "":
-                        if scan_type == "native":
-                            test_ssl, rating = run_testssl_native(target=domain, output_dir=ssl_folder, port=https_port) 
-                        elif scan_type == "docker":
-                            test_ssl, rating = run_testssl_docker(target=domain, output_dir=ssl_folder, port=https_port)
-                        else:
-                            test_ssl, rating = "", ""
-                        if test_ssl != "" or rating != "":
-                            full_test_ssl += "\n---------------------\nHTTPS on port " + https_port + "\n---------------------\n" + test_ssl 
-                            full_rating += "\n---------------------\nHTTPS on port " + https_port + "\n---------------------\n" + rating 
-                            test_ssl = ""
-                            rating = ""
-                        https_port = ""
+                if https_port != "":
+                    if scan_type == "native":
+                        test_ssl, rating = run_testssl_native(target=domain, output_dir=ssl_folder, port=https_port) 
+                    elif scan_type == "docker":
+                        test_ssl, rating = run_testssl_docker(target=domain, output_dir=ssl_folder, port=https_port)
+                    else:
+                        test_ssl, rating = "", ""
+                    if test_ssl != "" or rating != "":
+                        full_test_ssl += "\n---------------------\nHTTPS on port " + https_port + "\n---------------------\n" + test_ssl 
+                        full_rating += "\n---------------------\nHTTPS on port " + https_port + "\n---------------------\n" + rating 
+                        test_ssl = ""
+                        rating = ""
+                    https_port = ""
 
 
-                # Create the markdown file
-                file_name = os.path.join(folder_name, f"{domain}.md")
-                with open(file_name, "w") as md_file:
-                    # Write Markdown content to the file
-                    md_file.write("- [ ] Finished\n\n\n")
-                    md_file.write(f"# {domain}\n\n")
-                    
-                    md_file.write("# TCP\n\n")
+            # Create the markdown file
+            file_name = os.path.join(folder_name, f"{domain}.md")
+            with open(file_name, "w") as md_file:
+                # Write Markdown content to the file
+                md_file.write("- [ ] Finished\n\n\n")
+                md_file.write(f"# {domain}\n\n")
+                
+                md_file.write("# TCP\n\n")
+                md_file.write("```")
+                md_file.write(tcp_nmap)
+                md_file.write("```\n\n")
+                if not exclude_udp:
+                    md_file.write("# UDP\n\n")
                     md_file.write("```")
-                    md_file.write(tcp_nmap)
+                    md_file.write(udp_nmap)
                     md_file.write("```\n\n")
-                    if not exclude_udp:
-                        md_file.write("# UDP\n\n")
-                        md_file.write("```")
-                        md_file.write(udp_nmap)
-                        md_file.write("```\n\n")
 
-                    md_file.write("# FFuF / Gobuster\n\n")
-                    md_file.write("```\n\n```\n\n")
-                    
-                    if headers != "":
-                        md_file.write("# Test HTTP Header\n\n")
-                        md_file.write("```")
-                        md_file.write(headers)
-                        md_file.write("```\n\n")
+                md_file.write("# FFuF / Gobuster\n\n")
+                md_file.write("```\n\n```\n\n")
+                
+                if headers != "":
+                    md_file.write("# Test HTTP Header\n\n")
+                    md_file.write("```")
+                    md_file.write(headers)
+                    md_file.write("```\n\n")
 
-                    if full_rating != "":
-                        md_file.write("# Test SSL\n\n")
-                        md_file.write("```\n")
-                        md_file.write(full_rating)
-                        md_file.write("```\n\n")
-                    if full_test_ssl != "":
-                        md_file.write("## SSL linked CVE\n\n")
-                        md_file.write("```\n")
-                        md_file.write(full_test_ssl)
-                        md_file.write("```\n\n")
+                if full_rating != "":
+                    md_file.write("# Test SSL\n\n")
+                    md_file.write("```\n")
+                    md_file.write(full_rating)
+                    md_file.write("```\n\n")
+                if full_test_ssl != "":
+                    md_file.write("## SSL Linked CVE\n\n")
+                    md_file.write("```\n")
+                    md_file.write(full_test_ssl)
+                    md_file.write("```\n\n")
                     
-                    md_file.write("# Vulnerabilities\n\n\n")
-                print()
-                print(f"[+] Rapport written for {domain}")
-                print()
-        if user_group != ":" :
-            # Change rights to original user
-            command = ['sudo', "chown",  "-R", user_group  , folder_name]
-            subprocess.run(command)
-        exit(0)
+                if cookies_check_sec != "":
+                    md_file.write("## Cookie Vulnerabilities\n\n")
+                    md_file.write("```\n")
+                    md_file.write(cookies_check_sec)
+                    md_file.write("```\n\n")
+
+                md_file.write("# Vulnerabilities\n\n\n")
+            spinner.succeed(f'[+] Rapport written for {domain}')
+    if user_group != ":" :
+        # Change rights to original user
+        command = ['sudo', "chown",  "-R", user_group  , folder_name]
+        subprocess.run(command)
+    exit(0)
 
 def main():
     parser = argparse.ArgumentParser(description="Run different scans and write the repport", add_help=False)

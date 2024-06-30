@@ -1,3 +1,4 @@
+import requests as r
 import re
 import socket
 import os
@@ -5,6 +6,9 @@ import subprocess
 import pwd
 import grp
 import xml.etree.ElementTree as ET
+from http.cookies import SimpleCookie
+from colorama import Fore, Back, Style, init
+
 
 # Set UID to original user so folders and files are accessible
 def drop_privileges(uid_name='SUDO_UID', gid_name='SUDO_GID'):
@@ -121,7 +125,8 @@ def run_testssl_docker(target, output_dir="Test_SSL", port="443"):
     rating = 0
     content_to_save_vuln = ""
     content_to_save_rating = ""
-    if result.returncode == 0:
+    is_positive = False
+    if result.returncode >= 0 and os.path.exists(f'{output_dir}/testssl_{target}.log'):
         file = open(f'{output_dir}/testssl_{target}.log').readlines()
         for line in file:
             if 'Could not determine the protocol, only simulating generic clients.' in line:
@@ -134,11 +139,13 @@ def run_testssl_docker(target, output_dir="Test_SSL", port="443"):
             if test_vuln == 1 and "Testing vulnerabilities" not in line:
                 if "(OK)" not in line and len(line) > 1 and line[1].isalpha():
                     content_to_save_vuln += "[-] " + line
+                    is_positive = False
                 else:
                     if len(line) > 1 and line[1].isalpha():
-                        content_to_save_vuln += "[+] " + line
+                        is_positive = True
                     else:
-                        content_to_save_vuln += line
+                        if is_positive == False:
+                            content_to_save_vuln += line
             if "Rating (experimental)" in line:
                 content_to_save_rating += line
                 rating = 1
@@ -164,7 +171,7 @@ def run_testssl_native(target, output_dir="Test_SSL", port="443"):
             "git", "clone", "--depth", "1",
             "https://github.com/drwetter/testssl.sh.git"
         ]
-        subprocess.run(install_command)
+        subprocess.run(install_command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     
     if port != "443":
         target += ":"+port
@@ -175,7 +182,7 @@ def run_testssl_native(target, output_dir="Test_SSL", port="443"):
     rating = 0
     content_to_save_vuln = ""
     content_to_save_rating = ""
-
+    is_positive = False
     if result.returncode >= 0 and os.path.exists(f'{output_dir}/testssl_{target}.log'):
         file = open(f'{output_dir}/testssl_{target}.log').readlines()
         for line in file:
@@ -189,11 +196,13 @@ def run_testssl_native(target, output_dir="Test_SSL", port="443"):
             if test_vuln == 1 and "Testing vulnerabilities" not in line:
                 if "(OK)" not in line and len(line) > 1 and line[1].isalpha():
                     content_to_save_vuln += "[-] " + line
+                    is_positive = False
                 else:
                     if len(line) > 1 and line[1].isalpha():
-                        content_to_save_vuln += "[+] " + line
+                        is_positive = True
                     else:
-                        content_to_save_vuln += line
+                        if is_positive == False:
+                            content_to_save_vuln += line
             if "Rating (experimental)" in line:
                 content_to_save_rating += line
                 rating = 1
@@ -209,27 +218,187 @@ def run_testssl_native(target, output_dir="Test_SSL", port="443"):
     
     return content_to_save_vuln.encode().replace(b"\n\n\n", b"\n").decode(), content_to_save_rating.encode().replace(b"\n\n\n", b"\n").decode()
 
-# Get possible vulnerabilties from HTTP or HTTPS headers
-def run_shcheck(target, type="https", output_dir="Headers_Check", port=""):
+sec_headers = {
+    'X-XSS-Protection': 'deprecated',
+    'X-Frame-Options': 'warning',
+    'Content-Type': 'warning',
+    'Strict-Transport-Security': 'error',
+    'Content-Security-Policy': 'warning',
+    'X-Permitted-Cross-Domain-Policies': 'deprecated',
+    'Referrer-Policy': 'warning',
+}
+
+information_headers = {
+    'X-Powered-By',
+    'Server',
+    'X-AspNet-Version',
+    'X-AspNetMvc-Version'
+}
+
+cache_headers = {
+    'Cache-Control',
+    'Pragma',
+    'Last-Modified'
+    'Expires',
+    'ETag'
+}
+
+# My own header check
+def run_my_header_check(target, my_type="https", output_dir="Headers_Check", port=""):
+    headers = {}
+    missing_sec_headers = []
+    deprecated_headers = []
+    missing_info_headers = []
+    missing_cache_headers = []
+
     # Ensure the output directory exists
     os.makedirs(output_dir, exist_ok=True)
+    try:
+        if port in ["", "80", "443"]:
+            res = r.get(my_type+"://"+target)
+        else:
+            res = r.get(my_type+"://"+target+":"+port)
+    except:
+        return ""
+    if port == "":
+        port = "80" if my_type == "http" else 443
+    headers = res.headers
+
+    # Check if Headers from website are correctelly set up
+    for sec_key in sec_headers.keys():
+        if sec_key not in headers.keys():
+            if sec_headers[sec_key] != "deprecated":
+                missing_sec_headers.append(sec_key)
+        else:
+            if sec_headers[sec_key] == "deprecated":
+                deprecated_headers.append(sec_key)
+
+    for info_key in information_headers:
+        if info_key in headers.keys():
+            missing_info_headers.append(info_key+ f" ({headers[info_key]})")
+
+    for cache_key in cache_headers:
+        if cache_key not in headers.keys():
+            missing_cache_headers.append(cache_key)
     
-    if port in ["", "80", "443"]:
-        command = ["shcheck.py","--colours=none" , type+"://"+target, "-d"]
-    else:
-        command = ["shcheck.py","--colours=none" , type+"://"+target+":"+port, "-d"]
-    result = subprocess.run(command, capture_output=True, text=True)
+    init(autoreset=True)
+
+    # Prepare the display of the result
+    final_printed_result = f"-= Missing Headers =-\nTarget: {target}:{port}\n"
+    final_saved_result =  Style.BRIGHT + f"-= Missing Headers =-\nTarget: {target}:{port}\n"
     
-    if result.returncode == 0:
-        #print(result.stdout)
+    check = 0
+    if len(missing_sec_headers) != 0:
+        final_printed_result += "\nSecurity Headers Missing:\n"
+        final_saved_result += Style.RESET_ALL + Style.BRIGHT + "\nSecurity Headers Missing:\n"
+        for value in missing_sec_headers:
+            final_printed_result += "[-] " +value + "\n"
+            final_saved_result += Fore.YELLOW + "[-] " +value + "\n"
+        check += 1
+
+    if len(deprecated_headers) != 0:
+        final_printed_result += "\nSecurity Headers Deprecated (not to use):\n"
+        final_saved_result += Style.RESET_ALL + Style.BRIGHT + "\nSecurity Headers Deprecated (not to use):\n"
+        for value in deprecated_headers:
+            final_printed_result += "[-] " +value + "\n"
+            final_saved_result += Fore.YELLOW + "[-] " +value + "\n"
+        check += 1
+
+    if len(missing_info_headers) != 0:
+        final_printed_result += "\nInformation Disclosure Headers:\n"
+        final_saved_result += Style.RESET_ALL + Style.BRIGHT + "\nInformation Disclosure Headers:\n"
+        for value in missing_info_headers:
+            final_printed_result += "[-] " +value + "\n"
+            final_saved_result += Fore.YELLOW + "[-] " +value + "\n"
+        check += 1
+    if len(missing_cache_headers) != 0:
+        final_printed_result += "\nCache Headers Missing:\n"
+        final_saved_result += Style.RESET_ALL + Style.BRIGHT + "\nCache Headers Missing:\n"
+        for value in missing_cache_headers:
+            final_printed_result += "[-] " +value + "\n"
+            final_saved_result += Fore.YELLOW + "[-] " +value + "\n"
+        check += 1
+
+    final_printed_result += "\n-= End Headers Check =-\n\n"
+    final_saved_result += Style.RESET_ALL + Style.BRIGHT + "\n-= End Headers Check =-\n\n"
+    
+    if check > 0:
         with open(output_dir+"/header_"+target, "w+") as file:
-            file.write(result.stdout)
+            file.write(final_saved_result)
+            file.seek(0)
             if len(file.readlines()) == 0:
                 return ""
-        return result.stdout
+        return final_printed_result
     else:
-        print(f'Error: {result.stderr}')
-        return None
+        return ""
+
+# Check Security of the cookies
+def get_cookies_sec(target, my_type="https", port=""):
+    try:
+        if port in ["", "80", "443"]:
+            res = r.get(my_type+"://"+target)
+        else:
+            res = r.get(my_type+"://"+target+":"+port)
+    except:
+        return ""
+    headers = res.headers
+
+    # Retrieve all 'Set-Cookie' headers
+    set_cookie_headers = res.headers.get('Set-Cookie')
+    if set_cookie_headers is not None :
+        set_cookie_headers = split_set_cookie_headers(set_cookie_headers)
+    info_cookies = ""
+
+    if not set_cookie_headers:
+        set_cookie_headers = [headers.get('Set-Cookie')]
+
+    for cookie_header in set_cookie_headers:
+        if cookie_header:
+            # Parse the 'Set-Cookie' header using SimpleCookie
+            cookie = SimpleCookie()
+            cookie.load(cookie_header)
+
+            for key, morsel in cookie.items():
+                info_cookies += f"\nCookie: {morsel.OutputString()}"
+                # Check attributes
+                attributes = morsel.OutputString().split('; ')
+                has_http_only = 'HttpOnly' in attributes
+                has_secure = 'Secure' in attributes
+                samesite_value = [attr for attr in attributes if attr.lower().startswith('samesite')]
+
+                info_cookies += f"\nHttpOnly: {'Yes' if has_http_only else 'No [!]'}"
+                info_cookies += f"\nSecure: {'Yes' if has_secure else 'No [!]'}"
+                if samesite_value:
+                    samesite_final_value = samesite_value[0].split('=')[1].lower()
+                    if samesite_final_value not in ["lax", "strict"]:
+                        info_cookies += f"\nSameSite: {samesite_final_value} [!] Need to use 'strict' or 'lax'"
+                    elif samesite_final_value == "lax":
+                        info_cookies += f"\nSameSite: {samesite_final_value} (may be better to use 'strict' value)')"
+
+
+                else:
+                    info_cookies += f"\nSameSite: No"
+
+                info_cookies += "\n" + "-" * 48 + "\n\n"
+        else:
+            return ""
+    return info_cookies
+
+# Split correctly the cookies 
+def split_set_cookie_headers(header_value):
+    cookies = []
+    cookie = ""
+    parts = header_value.split(",")
+    for part in parts:
+        if "expires=" in part.lower():
+            cookie += part + ","
+        else:
+            cookie += part
+            cookies.append(cookie.strip())
+            cookie = ""
+    if cookie:
+        cookies.append(cookie.strip())
+    return cookies
 
 # Get list of web port and protocol
 def extract_web_ports_from_gnmap(gnmap_file):
