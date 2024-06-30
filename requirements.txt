@@ -1,2 +1,2 @@
-shcheck
-alive-progress
+halo
+colorama
