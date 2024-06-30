@@ -116,7 +116,7 @@ def create_markdown_files(path="./", folder_name="project_name", hosts_file="hos
                     md_file.write("```\n\n")
                     
                 if cookies_check_sec != "":
-                    md_file.write("## Cookie Vulnerabilities\n\n")
+                    md_file.write("# Cookie Misconfigurations\n\n")
                     md_file.write("```\n")
                     md_file.write(cookies_check_sec)
                     md_file.write("```\n\n")

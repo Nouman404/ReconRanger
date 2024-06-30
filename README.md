@@ -69,6 +69,11 @@ SSL test result
 SSL CVEs
 ...
 
+# Cookie Misconfigurations
+...
+Cookie Misconfigurations
+...
+
 # Vulnerabilities
 
 waiting_your_input
