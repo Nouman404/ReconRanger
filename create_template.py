@@ -3,8 +3,12 @@ from functions import *
 import argparse
 from halo import Halo
 import sys
+from colorama import Fore, Back, Style, init
+import signal
 
 def create_markdown_files(path="./", folder_name="project_name", hosts_file="hosts.txt", scan_folder="Nmap_Scans", udp_flags="" , tcp_flags="", exclude_udp=False, ssl_folder="Test_SSL", scan_type="native", header_folder="Headers_Check", user_group=":"):
+    signal.signal(signal.SIGINT, signal_handler)
+
     # Create the folder if it doesn't exist
     if not os.path.exists(path+"/"+folder_name):
         folder_name = path+"/"+folder_name
@@ -23,6 +27,8 @@ def create_markdown_files(path="./", folder_name="project_name", hosts_file="hos
         print("[-] Host file not present")
         exit(1)
 
+    change_owner(folder_name, user_group)
+
     # Read the hosts.txt file
     with open(hosts_file, "r") as file:
         # Read each line from the file
@@ -34,13 +40,25 @@ def create_markdown_files(path="./", folder_name="project_name", hosts_file="hos
             if not domain or domain.startswith("#"):
                 continue
             
-            spinner = Halo(text=f'Scanning {domain}', spinner='dots')
-            spinner.start()
+            
+            print(Style.RESET_ALL + Style.BRIGHT + f'Scanning {domain}'+Style.RESET_ALL)
 
             # Run Nmap scan
             if not exclude_udp:
-                udp_nmap = launch_udp_nmap(target=domain, flags=udp_flags ,folder=scan_folder)             
+                spinner_udp = Halo(text=f'UDP scan started', spinner='dots')
+                spinner_udp.start()
+                udp_nmap = launch_udp_nmap(target=domain, flags=udp_flags ,folder=scan_folder)   
+                spinner_udp.succeed(f'UDP scan ended')
+                if user_group != ":" :
+                    change_owner(scan_folder, user_group)
+            
+            spinner_tcp = Halo(text=f'TCP scan started', spinner='dots')
+            spinner_tcp.start()
             tcp_nmap = launch_tcp_nmap(target=domain, flags=tcp_flags ,folder=scan_folder)
+            spinner_tcp.succeed(f'TCP scan ended')
+            if user_group != ":" :
+                change_owner(scan_folder, user_group)
+
             # Check if a web port is open http and/or https to display or not the "Test HTTP Header" section
             value_of_web_port = extract_open_http_ports(scan_folder+"/nmap_tcp_"+domain+".xml")
 
@@ -51,23 +69,44 @@ def create_markdown_files(path="./", folder_name="project_name", hosts_file="hos
             full_rating = ""
             test_ssl, rating = "", ""
             cookies_check_sec = ""
+
             for value in value_of_web_port:
                 if "https" in value:
                     # Run Header check on HTTPS
                     https_port = value["https"]
+                    spinner_header = Halo(text=f'Header scan started on port {https_port}', spinner='dots')
+                    spinner_header.start()
                     headers += run_my_header_check(target=domain, my_type="https", output_dir=header_folder, port=https_port)
+                    spinner_header.succeed(f'Header scan ended on port {https_port}')
+
+                    spinner_cookie = Halo(text=f'Cookie scan started on port {https_port}', spinner='dots')
+                    spinner_cookie.start()
                     cookies_check_sec += get_cookies_sec(target=domain, my_type="https", port=https_port)
+                    spinner_cookie.succeed(f'Cookie scan ended on port {https_port}')
                 else:
                     if "http" in value:
                         port = value["http"]
+                        spinner_header = Halo(text=f'Header scan started on port {port}', spinner='dots')
+                        spinner_header.start()
                         headers += run_my_header_check(target=domain, my_type="http", output_dir=header_folder, port=port)
+                        spinner_header.succeed(f'Header scan ended on port {port}')
+
+                        spinner_cookie = Halo(text=f'Cookie scan started on port {port}', spinner='dots')
+                        spinner_cookie.start()
                         cookies_check_sec += get_cookies_sec(target=domain, my_type="http", port=port)
-                    # Run Certificate check on HTTPS
+                        spinner_cookie.succeed(f'Cookie scan ended on port {port}')
+                # Run Certificate check on HTTPS
                 if https_port != "":
                     if scan_type == "native":
-                        test_ssl, rating = run_testssl_native(target=domain, output_dir=ssl_folder, port=https_port) 
+                        spinner_header = Halo(text=f'TestSSL (native) scan started on port {https_port}', spinner='dots')
+                        spinner_header.start()
+                        test_ssl, rating = run_testssl_native(target=domain, output_dir=ssl_folder, port=https_port)
+                        spinner_cookie.succeed(f'TestSSL (native) scan ended on port {https_port}') 
                     elif scan_type == "docker":
+                        spinner_header = Halo(text=f'TestSSL (docker) scan started on port {https_port}', spinner='dots')
+                        spinner_header.start()
                         test_ssl, rating = run_testssl_docker(target=domain, output_dir=ssl_folder, port=https_port)
+                        spinner_cookie.succeed(f'TestSSL (docker) scan ended on port {https_port}') 
                     else:
                         test_ssl, rating = "", ""
                     if test_ssl != "" or rating != "":
@@ -76,6 +115,10 @@ def create_markdown_files(path="./", folder_name="project_name", hosts_file="hos
                         test_ssl = ""
                         rating = ""
                     https_port = ""
+            if user_group != ":":
+                change_owner(header_folder, user_group)
+                if full_rating != "":
+                    change_owner(ssl_folder, user_group)
 
 
             # Create the markdown file
@@ -89,6 +132,7 @@ def create_markdown_files(path="./", folder_name="project_name", hosts_file="hos
                 md_file.write("```")
                 md_file.write(tcp_nmap)
                 md_file.write("```\n\n")
+
                 if not exclude_udp:
                     md_file.write("# UDP\n\n")
                     md_file.write("```")
@@ -122,11 +166,13 @@ def create_markdown_files(path="./", folder_name="project_name", hosts_file="hos
                     md_file.write("```\n\n")
 
                 md_file.write("# Vulnerabilities\n\n\n")
-            spinner.succeed(f'[+] Rapport written for {domain}')
+
+            spinner = Halo()
+            spinner.info(f'Rapport written for {domain}')
+            print("\n\n")
     if user_group != ":" :
         # Change rights to original user
-        command = ['sudo', "chown",  "-R", user_group  , folder_name]
-        subprocess.run(command)
+        change_owner(folder_name, user_group)
     exit(0)
 
 def main():

@@ -5,9 +5,11 @@ import os
 import subprocess
 import pwd
 import grp
+import sys
 import xml.etree.ElementTree as ET
 from http.cookies import SimpleCookie
 from colorama import Fore, Back, Style, init
+from halo import Halo
 
 
 # Set UID to original user so folders and files are accessible
@@ -30,14 +32,17 @@ def get_current_user_and_group():
     return user_name, group_name
 
 # Change ownership of a file/directory
-def change_owner(path, user, group):
+def change_owner(path, user_group):
     try:
-        uid = pwd.getpwnam(user).pw_uid
-        gid = grp.getgrnam(group).gr_gid
-        os.chown(path, uid, gid)
-        print(f"Changed ownership of {path} to {user}:{group}")
+        command = ['sudo', "chown",  "-R", user_group  , path]
+        subprocess.run(command)
     except KeyError as e:
         print(f"Error: {e}")
+
+def signal_handler(sig, frame):
+    spinner = Halo(text=f'Program aborted', spinner='dots')
+    spinner.fail()
+    sys.exit(0)
 
 # Check if the format looks like an IP or not (domain)
 def isIP(value):
@@ -59,7 +64,7 @@ def launch_tcp_nmap(target, flags="", folder="Nmap_Scans"):
         # Add output
         arguments += " -oA " + folder + "/nmap_tcp_" + target
 
-    if not os.path.exists(folder + "/nmap_tcp_" + target+".nmap"):
+    if not os.path.exists(folder + "/nmap_tcp_" + target +".nmap") or not os.path.exists(folder + "/nmap_tcp_" + target +".xml"):
         command = ["nmap"]+ arguments.split() + [target]
         # Run the command and capture the text output
         result = subprocess.run(command, capture_output=True, text=True)
@@ -72,7 +77,18 @@ def launch_tcp_nmap(target, flags="", folder="Nmap_Scans"):
             print(f'Error: {result.stderr}')
             return "\n\n"
     else:
-        return open(folder + "/nmap_tcp_" + target+".nmap").read()
+        try:
+            ET.parse(folder + "/nmap_tcp_" + target +".xml")
+            return open(folder + "/nmap_tcp_" + target +".nmap").read()
+        except:
+            os.remove(folder + "/nmap_tcp_" + target +".nmap")
+            if os.path.exists(folder + "/nmap_tcp_" + target +".gnmap"):
+                os.remove(folder + "/nmap_tcp_" + target +".gnmap")
+            if os.path.exists(folder + "/nmap_tcp_" + target +".xml"):
+                os.remove(folder + "/nmap_tcp_" + target +".xml")
+            launch_tcp_nmap(target, flags, folder)
+
+
         
 # Run a classic UDP nmap scan
 def launch_udp_nmap(target, flags="", folder="Nmap_Scans"):
@@ -90,7 +106,7 @@ def launch_udp_nmap(target, flags="", folder="Nmap_Scans"):
     
     command = ["sudo", "nmap"]+ arguments.split() + [target]
     
-    if not os.path.exists(folder + "/nmap_udp_" + target+".nmap"):
+    if not os.path.exists(folder + "/nmap_udp_" + target +".nmap") or not os.path.exists(folder + "/nmap_udp_" + target +".xml"):
         # Run the command and capture the text output
         result = subprocess.run(command, capture_output=True, text=True)
 
@@ -101,7 +117,17 @@ def launch_udp_nmap(target, flags="", folder="Nmap_Scans"):
             # Print the error
             print(f'Error: {result.stderr}')
     else:
-        return open(folder + "/nmap_udp_" + target+".nmap").read()
+        try:
+            ET.parse(folder + "/nmap_udp_" + target +".xml")
+            return open(folder + "/nmap_udp_" + target +".nmap").read()
+        except:
+            os.remove(folder + "/nmap_udp_" + target +".nmap")
+            if os.path.exists(folder + "/nmap_udp_" + target +".gnmap"):
+                os.remove(folder + "/nmap_udp_" + target +".gnmap")
+            if os.path.exists(folder + "/nmap_udp_" + target +".xml"):
+                os.remove(folder + "/nmap_udp_" + target +".xml")
+            launch_udp_nmap(target, flags, folder)
+        
 
 # Run testssl.sh on the specified target using docker
 def run_testssl_docker(target, output_dir="Test_SSL", port="443"):
@@ -257,7 +283,7 @@ def run_my_header_check(target, my_type="https", output_dir="Headers_Check", por
         if port in ["", "80", "443"]:
             res = r.get(my_type+"://"+target)
         else:
-            res = r.get(my_type+"://"+target+":"+port)
+            res = r.get(my_type+"://"+target +":"+port)
     except:
         return ""
     if port == "":
@@ -338,7 +364,7 @@ def get_cookies_sec(target, my_type="https", port=""):
         if port in ["", "80", "443"]:
             res = r.get(my_type+"://"+target)
         else:
-            res = r.get(my_type+"://"+target+":"+port)
+            res = r.get(my_type+"://"+target +":"+port)
     except:
         return ""
     headers = res.headers
