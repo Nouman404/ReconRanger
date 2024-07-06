@@ -98,15 +98,15 @@ def create_markdown_files(path="./", folder_name="project_name", hosts_file="hos
                 # Run Certificate check on HTTPS
                 if https_port != "":
                     if scan_type == "native":
-                        spinner_header = Halo(text=f'TestSSL (native) scan started on port {https_port}', spinner='dots')
-                        spinner_header.start()
+                        spinner_testSSL = Halo(text=f'TestSSL (native) scan started on port {https_port}', spinner='dots')
+                        spinner_testSSL.start()
                         test_ssl, rating = run_testssl_native(target=domain, output_dir=ssl_folder, port=https_port)
-                        spinner_cookie.succeed(f'TestSSL (native) scan ended on port {https_port}') 
+                        spinner_testSSL.succeed(f'TestSSL (native) scan ended on port {https_port}') 
                     elif scan_type == "docker":
-                        spinner_header = Halo(text=f'TestSSL (docker) scan started on port {https_port}', spinner='dots')
-                        spinner_header.start()
+                        spinner_testSSL = Halo(text=f'TestSSL (docker) scan started on port {https_port}', spinner='dots')
+                        spinner_testSSL.start()
                         test_ssl, rating = run_testssl_docker(target=domain, output_dir=ssl_folder, port=https_port)
-                        spinner_cookie.succeed(f'TestSSL (docker) scan ended on port {https_port}') 
+                        spinner_testSSL.succeed(f'TestSSL (docker) scan ended on port {https_port}') 
                     else:
                         test_ssl, rating = "", ""
                     if test_ssl != "" or rating != "":
