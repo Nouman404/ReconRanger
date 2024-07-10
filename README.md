@@ -146,3 +146,6 @@ You can modify any of the input used by the program by using the simple flags `-
 ## LICENCE
 
 This project is using a GPL3 licence available [here](https://raw.githubusercontent.com/Nouman404/ReconRanger/main/LICENSE)
+
+# TODO
+- [ ] Add CSP check
