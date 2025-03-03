@@ -12,24 +12,13 @@ from colorama import Fore, Back, Style, init
 from halo import Halo
 
 
-# Set UID to original user so folders and files are accessible
-def drop_privileges(uid_name='SUDO_UID', gid_name='SUDO_GID'):
-    if uid_name in os.environ and gid_name in os.environ:
-        new_uid = int(os.environ[uid_name])
-        new_gid = int(os.environ[gid_name])
 
-        os.setgroups([])
-        os.setgid(new_gid)
-        os.setuid(new_uid)
-    else:
-        print("Could not find UID and GID in environment")
-
-def get_current_user_and_group():
-    user_id = os.getuid()
-    group_id = os.getgid()
-    user_name = pwd.getpwuid(user_id).pw_name
-    group_name = grp.getgrgid(group_id).gr_name
-    return user_name, group_name
+def get_current_user_and_group(uid_name='SUDO_UID', gid_name='SUDO_GID'):
+    old_uid = int(os.environ[uid_name])
+    old_gid = int(os.environ[gid_name])
+    old_user = pwd.getpwuid(old_uid).pw_name
+    old_group = grp.getgrgid(old_gid).gr_name
+    return old_user, old_group
 
 # Change ownership of a file/directory
 def change_owner(path, user_group):
@@ -46,75 +35,88 @@ def signal_handler(sig, frame):
 
 # Check if the format looks like an IP or not (domain)
 def isIP(value):
-    return re.search("[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}", value)
+    return re.search(r"[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}", value)
 
 # Run a classic TCP nmap scan
 def launch_tcp_nmap(target, flags="", folder="Nmap_Scans"):
+    nmap_folder = os.path.normpath(folder)
     # Ensure the output directory exists
-    os.makedirs(folder, exist_ok=True)
+    os.makedirs(nmap_folder, exist_ok=True)
 
     # Launch basic nmap scan
     if flags == "":
-        arguments='-vv -Pn --min-rate 1000 -p- -sV -sC '
+        arguments='-vv -Pn --min-rate 1000 -p- -sV -sC'
     else:
         arguments=flags
-    if "-sC" not in arguments and "-sV" not in arguments:
-        arguments += " -sC -sV"
-    if "-oA" not in arguments or "-oX" not in arguments:
-        # Add output
-        arguments += " -oA " + folder + "/nmap_tcp_" + target
 
-    if not os.path.exists(folder + "/nmap_tcp_" + target +".nmap") or not os.path.exists(folder + "/nmap_tcp_" + target +".xml"):
-        command = ["nmap"]+ arguments.split() + [target]
-        # Run the command and capture the text output
-        result = subprocess.run(command, capture_output=True, text=True)
+    if not os.path.exists(nmap_folder + "/nmap_tcp_" + target +".nmap") or not os.path.exists(nmap_folder + "/nmap_tcp_" + target +".xml"):
+        command = ["nmap"]+ arguments.split(" ") 
+        add_options = None
+        add_path = None
+        if "-sC" not in arguments or "-sV" not in arguments:
+            arguments = arguments.replace("-sC", "").replace("-sV", "")
+            add_options = "-sC -sV".split()
+        if "-oA" not in arguments or "-oX" not in arguments:
+            # Add output
+            add_path = ["-oA"]
+            add_path.extend([nmap_folder + "/nmap_tcp_" + target])
+            
+        if add_options is not None:
+            command.extend(add_options)
+        if add_path is not None:
+            command.extend(add_path)
+        
+        command.extend([target])
 
-        # Check if the command was successful
-        if result.returncode == 0:
-            return result.stdout
-        else:
-            # Print the error
+        try:
+            # Run the command and capture the text output
+            result = subprocess.run(command, capture_output=True, text=True)
+            return result.stdout    
+        except subprocess.CalledProcessError as e:
+            print(f"Error! Return Code: {e.returncode}")
             print(f'Error: {result.stderr}')
-            return "\n\n"
     else:
         try:
-            ET.parse(folder + "/nmap_tcp_" + target +".xml")
-            return open(folder + "/nmap_tcp_" + target +".nmap").read()
+            ET.parse(nmap_folder + "/nmap_tcp_" + target +".xml")
+            return open(nmap_folder + "/nmap_tcp_" + target +".nmap").read()
         except:
-            os.remove(folder + "/nmap_tcp_" + target +".nmap")
-            if os.path.exists(folder + "/nmap_tcp_" + target +".gnmap"):
-                os.remove(folder + "/nmap_tcp_" + target +".gnmap")
-            if os.path.exists(folder + "/nmap_tcp_" + target +".xml"):
-                os.remove(folder + "/nmap_tcp_" + target +".xml")
-            launch_tcp_nmap(target, flags, folder)
+            os.remove(nmap_folder + "/nmap_tcp_" + target +".nmap")
+            if os.path.exists(nmap_folder + "/nmap_tcp_" + target +".gnmap"):
+                os.remove(nmap_folder + "/nmap_tcp_" + target +".gnmap")
+            if os.path.exists(nmap_folder + "/nmap_tcp_" + target +".xml"):
+                os.remove(nmap_folder + "/nmap_tcp_" + target +".xml")
+            launch_tcp_nmap(target, flags, nmap_folder)
 
-
-        
 # Run a classic UDP nmap scan
 def launch_udp_nmap(target, flags="", folder="Nmap_Scans"):
+    nmap_folder = os.path.normpath(folder)
     # Ensure the output directory exists
     os.makedirs(folder, exist_ok=True)
+
     # Launch basic nmap scan
     if flags == "":
-        arguments='-vv -Pn --min-rate 1000 -sU --top-ports 1000 -sV -sC '
+        arguments='-vv -Pn --min-rate 1000 -sU --top-ports 1000 -sV -sC'
     else:
         arguments=flags
 
-    if "-oA" not in arguments or "-oG" not in arguments:
-        # Add output
-        arguments += " -oA " + folder + "/nmap_udp_" + target
-    
-    command = ["sudo", "nmap"]+ arguments.split() + [target]
-    
     if not os.path.exists(folder + "/nmap_udp_" + target +".nmap") or not os.path.exists(folder + "/nmap_udp_" + target +".xml"):
-        # Run the command and capture the text output
-        result = subprocess.run(command, capture_output=True, text=True)
+        command = ["sudo", "nmap"]+ arguments.split(" ")
+        add_path = None
+        if "-oA" not in arguments or "-oX" not in arguments:
+            # Add output
+            add_path = ["-oA"]
+            add_path.extend([nmap_folder + "/nmap_udp_" + target])
+        if add_path is not None:
+            command.extend(add_path)
 
-        # Check if the command was successful
-        if result.returncode == 0:
-            return result.stdout
-        else:
-            # Print the error
+        command.extend([target])        
+        
+        try:
+            # Run the command and capture the text output
+            result = subprocess.run(command, capture_output=True, text=True)
+            return result.stdout    
+        except subprocess.CalledProcessError as e:
+            print(f"Error! Return Code: {e.returncode}")
             print(f'Error: {result.stderr}')
     else:
         try:
@@ -484,14 +486,15 @@ def help_menu():
     Options:
       -h, --help                Show this help message and exit
       -D, --default             Use default settings
+      -H, --host_file           Name of the host file (default: "./hosts.txt")
       -p, --path                Path where to create the report (default: "./")
       -n, --name                Name of the project (default: "./test_project")
-      -H, --host_file           Name of the host file (default: "./hosts.txt")
+      -U --user-group           User and group that will own the folder as user:group
 
     Nmap Options:
       -s, --scan-dir            Folder name for the nmap output folder (default: "[PROJECT_FOLDER]/Nmap_Scans")
-      -sU, --udp-flags          Specify your own nmap flags for UDP scan (default: "-vv -Pn --min-rate 1000 -sU --top-ports 1000 -sV -sC")
-      -sT, --tcp-flags          Specify your own nmap flags for TCP scan (default: "-vv -Pn --min-rate 1000 -p- -sV -sC")
+      -sU, --udp-flags          Specify your own nmap flags for UDP scan -sU="options1 option2...." (default: "-vv -Pn --min-rate 1000 -sU --top-ports 1000 -sV -sC")
+      -sT, --tcp-flags          Specify your own nmap flags for TCP scan as: -sT="options1 option2...." (default: "-vv -Pn --min-rate 1000 -p- -sV -sC")
       -xU, --exclude-udp        Exclude UDP scan from the report (default: False)
 
     TestSSL Options:  
@@ -501,6 +504,7 @@ def help_menu():
     Header Check Options:
       -He, --header-folder     Folder name for the HTTP header check (default: "[PROJECT_FOLDER]/Headers_Check")
 
+    
 
     Examples:
       python ReconRanger.py -D

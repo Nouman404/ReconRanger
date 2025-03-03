@@ -27,8 +27,6 @@ def create_markdown_files(path="./", folder_name="project_name", hosts_file="hos
         print("[-] Host file not present")
         exit(1)
 
-    change_owner(folder_name, user_group)
-
     # Read the hosts.txt file
     with open(hosts_file, "r") as file:
         # Read each line from the file
@@ -49,15 +47,11 @@ def create_markdown_files(path="./", folder_name="project_name", hosts_file="hos
                 spinner_udp.start()
                 udp_nmap = launch_udp_nmap(target=domain, flags=udp_flags ,folder=scan_folder)   
                 spinner_udp.succeed(f'UDP scan ended')
-                if user_group != ":" :
-                    change_owner(scan_folder, user_group)
             
             spinner_tcp = Halo(text=f'TCP scan started', spinner='dots')
             spinner_tcp.start()
             tcp_nmap = launch_tcp_nmap(target=domain, flags=tcp_flags ,folder=scan_folder)
             spinner_tcp.succeed(f'TCP scan ended')
-            if user_group != ":" :
-                change_owner(scan_folder, user_group)
 
             # Check if a web port is open http and/or https to display or not the "Test HTTP Header" section
             value_of_web_port = extract_open_http_ports(scan_folder+"/nmap_tcp_"+domain+".xml")
@@ -115,11 +109,6 @@ def create_markdown_files(path="./", folder_name="project_name", hosts_file="hos
                         test_ssl = ""
                         rating = ""
                     https_port = ""
-            if user_group != ":":
-                change_owner(header_folder, user_group)
-                if full_rating != "":
-                    change_owner(ssl_folder, user_group)
-
 
             # Create the markdown file
             file_name = os.path.join(folder_name, f"{domain}.md")
