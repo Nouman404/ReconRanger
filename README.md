@@ -18,16 +18,27 @@
 
 So this script could allow you to scan a lot of domains/IPs and give you Nmap (UDP+TCP) scan result with an SSL check and a header check. A section for your fuzzing is added so you can put the result you found and a vulnerability section for you to add any vulnerability on your report. 
 
-## Installation
+## Default Install
 
 To be able to run this script use the following command:
 
 ```bash
+git clone --recursive https://github.com/Nouman404/ReconRanger.git
+cd ReconRanger
 sudo pip3 install -r requirements.txt
 ```
 
 > Note that you have to run the pip install in sudo. This is due to the way the program runs. The nmap in UDP mode needs sudo rights so to be able to scan a lot of IPs/domains the whole process runs in sudo. If not, you would be asked to retype the password and may need to stay in front of your computer...
 
+## Docker Install
+
+```bash
+git clone https://github.com/Nouman404/ReconRanger.git
+cd ReconRanger
+sudo docker build -t reconranger .
+```
+
+> If you get any issues when trying the docker build command try restarting your docker service using `sudo systemctl restart docker`
 
 ## Information
 
@@ -109,7 +120,6 @@ If you run the scipt without any parameter or using the `-h` or `--help` flag, y
 
     TestSSL Options:  
       -S, --ssl                 Folder name for the SSL check output folder (default: "[PROJECT_FOLDER]/Test_SSL")
-      -St, --scan-type          User either "docker" or "native" to either run a docker container for the testssl or run it from binary.
     
     Header Check Options:
       -He, --header-folder     Folder name for the HTTP header check (default: "[PROJECT_FOLDER]/Headers_Check")
@@ -136,16 +146,24 @@ You can use the `--default` or `-D` flag to run the script with default options.
 - Exlude UDP scans (`-xU`, `--exclude-udp`): `False` (No need to specify True after using this flag)
 - Host file (`-H`, `--host-file`): `./hosts.txt`
 - Test SSL folder (`-S`, `--ssl`): `[PROJECT_FOLDER]/Test_SSL`
-- Header scan type (`-sT`, `--scan-type`): `native`
 - Header folder (`-He`, `--user-group`): `./Headers_Check`
 
 ### Custom
 
 You can modify any of the input used by the program by using the simple flags `-X` or long flags `--XYZ`. Be aware that the flags that can take a string as argument (flags for Nmap TCP/UDP) need the `=` sign to work. So, `-sT -p 10-1000` won't work if you want to scan the port from 10 to 1000. Instead you will have to run `-sT="-p 10-1000"` 
 
+### Exemples
+
+Via your host:
+```bash
+sudo python3 ReconRanger.py -H ../hosts.txt -p ../ -n my_project -xU"
+```
+
+Via docker:
+```bash
+sudo docker run --cap-add NET_RAW --rm -it -v "/home/user/Documents/:/ReconRangerDir/" reconranger -H /ReconRangerDir/hosts.txt -p /ReconRangerDir/ -n my_project -xU
+```
+
 ## LICENCE
 
 This project is using a GPL3 licence available [here](https://raw.githubusercontent.com/Nouman404/ReconRanger/main/LICENSE)
-
-# TODO
-- [ ] Add CSP check

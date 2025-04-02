@@ -26,6 +26,9 @@ reconranger = """
 
 print(reconranger)
 
+if os.getuid() != 0:
+    print("Please run the script as root")
+    exit()
 user_name, group_name = get_current_user_and_group()
 target_script_path = "create_template.py"
 list_flags = ""
@@ -37,7 +40,7 @@ for flag in sys.argv[1:]:
             list_flags += "'" + flag + "' "
         else:
             list_flags += flag + " "
-command = f'sudo python3 "{script_dir}/{target_script_path}" -U {user_name}:{group_name} {list_flags}'
+command = f'python3 "{script_dir}/{target_script_path}" -U {user_name}:{group_name} {list_flags}'
 exit_code = os.system(command)
 
 if exit_code != 0:
