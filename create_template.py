@@ -6,7 +6,7 @@ import sys
 from colorama import Fore, Back, Style, init
 import signal
 
-def create_markdown_files(path="./", folder_name="project_name", hosts_file="hosts.txt", scan_folder="Nmap_Scans", udp_flags="" , tcp_flags="", exclude_udp=False, ssl_folder="Test_SSL", scan_type="native", header_folder="Headers_Check", user_group=":"):
+def create_markdown_files(path="./", folder_name="project_name", hosts_file="hosts.txt", scan_folder="Nmap_Scans", udp_flags="" , tcp_flags="", exclude_udp=False, ssl_folder="Test_SSL", header_folder="Headers_Check", user_group=":"):
     signal.signal(signal.SIGINT, signal_handler)
 
     # Create the folder if it doesn't exist
@@ -18,11 +18,10 @@ def create_markdown_files(path="./", folder_name="project_name", hosts_file="hos
         folder_name = path+"/"+folder_name
         
     folder_name = os.path.normpath(folder_name)
-
     ssl_folder = os.path.normpath(folder_name + "/"+ ssl_folder)
     header_folder = os.path.normpath(folder_name + "/"+ header_folder)
     scan_folder = os.path.normpath(folder_name + "/"+ scan_folder)
-        
+
     if not os.path.exists(hosts_file):
         print("[-] Host file not present")
         exit(1)
@@ -63,7 +62,7 @@ def create_markdown_files(path="./", folder_name="project_name", hosts_file="hos
             full_rating = ""
             test_ssl, rating = "", ""
             cookies_check_sec = ""
-
+            
             for value in value_of_web_port:
                 if "https" in value:
                     # Run Header check on HTTPS
@@ -91,18 +90,10 @@ def create_markdown_files(path="./", folder_name="project_name", hosts_file="hos
                         spinner_cookie.succeed(f'Cookie scan ended on port {port}')
                 # Run Certificate check on HTTPS
                 if https_port != "":
-                    if scan_type == "native":
-                        spinner_testSSL = Halo(text=f'TestSSL (native) scan started on port {https_port}', spinner='dots')
-                        spinner_testSSL.start()
-                        test_ssl, rating = run_testssl_native(target=domain, output_dir=ssl_folder, port=https_port)
-                        spinner_testSSL.succeed(f'TestSSL (native) scan ended on port {https_port}') 
-                    elif scan_type == "docker":
-                        spinner_testSSL = Halo(text=f'TestSSL (docker) scan started on port {https_port}', spinner='dots')
-                        spinner_testSSL.start()
-                        test_ssl, rating = run_testssl_docker(target=domain, output_dir=ssl_folder, port=https_port)
-                        spinner_testSSL.succeed(f'TestSSL (docker) scan ended on port {https_port}') 
-                    else:
-                        test_ssl, rating = "", ""
+                    spinner_testSSL = Halo(text=f'TestSSL scan started on port {https_port}', spinner='dots')
+                    spinner_testSSL.start()
+                    test_ssl, rating = run_testssl(target=domain, output_dir=ssl_folder, port=https_port)
+                    spinner_testSSL.succeed(f'TestSSL scan ended on port {https_port}') 
                     if test_ssl != "" or rating != "":
                         full_test_ssl += "\n---------------------\nHTTPS on port " + https_port + "\n---------------------\n" + test_ssl 
                         full_rating += "\n---------------------\nHTTPS on port " + https_port + "\n---------------------\n" + rating 
@@ -176,7 +167,6 @@ def main():
     parser.add_argument("-xU", "--exclude-udp", action="store_true", default="", help='Exclude UDP scan')
     parser.add_argument("-H", "--host-file", default="./hosts.txt", help='Name of the host file (default: "./hosts.txt")')
     parser.add_argument("-S", "--ssl", default="./Test_SSL", help='Folder name for the SSL check output folder (default: "./Test_SSL")')
-    parser.add_argument("-St", "--scan-type", choices=["docker", "native"], help='Use either "docker" or "native" to either run a docker container for the testssl or run it from binary.')
     parser.add_argument("-He", "--header-folder", default="./Headers_Check", help='Folder name for the HTTP header check (default: "./Headers_Check")')
     parser.add_argument("-U", "--user-group", default="", help='Specify the username and group as user:group')
 
@@ -231,17 +221,12 @@ def main():
         else:
             header_folder = "./Headers_Check"
 
-        if args.scan_type:
-            scan_type = args.scan_type
-        else:
-            scan_type = "native"
-
         if args.user_group:
             user_group = args.user_group
         else:
             user_group = ":"
 
-    create_markdown_files(path=output_dir, folder_name=project_name, hosts_file=host_file, scan_folder=scan_dir, udp_flags=udp_flags, tcp_flags=tcp_flags, exclude_udp=exclude_udp, ssl_folder=ssl_folder, scan_type=scan_type, header_folder=header_folder, user_group=user_group)
+    create_markdown_files(path=output_dir, folder_name=project_name, hosts_file=host_file, scan_folder=scan_dir, udp_flags=udp_flags, tcp_flags=tcp_flags, exclude_udp=exclude_udp, ssl_folder=ssl_folder, header_folder=header_folder, user_group=user_group)
 
 if __name__ == "__main__":
     main()

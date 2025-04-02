@@ -67,7 +67,7 @@ def launch_tcp_nmap(target, flags="", folder="Nmap_Scans"):
             command.extend(add_path)
         
         command.extend([target])
-
+        
         try:
             # Run the command and capture the text output
             result = subprocess.run(command, capture_output=True, text=True)
@@ -130,24 +130,14 @@ def launch_udp_nmap(target, flags="", folder="Nmap_Scans"):
                 os.remove(folder + "/nmap_udp_" + target +".xml")
             launch_udp_nmap(target, flags, folder)
         
-
-# Run testssl.sh on the specified target using docker
-def run_testssl_docker(target, output_dir="Test_SSL", port="443"):
+# Run testssl.sh on the specified target 
+def run_testssl(target, output_dir="Test_SSL", port="443"):
     # Ensure the output directory exists
     os.makedirs(output_dir, exist_ok=True)
-
-    uid = os.getuid()
-    gid = os.getgid()
     if port != "443":
         target += ":"+port
 
-    command = [
-        'sudo', 'docker', 'run', '--rm',
-        '-v', f"{os.path.abspath(output_dir)}:/ssl",
-        '--user', f"{uid}:{gid}",
-        'drwetter/testssl.sh','--color', '0', '--warnings', 'off', '--ip', 'one' ,'--overwrite', '--logfile', f"/ssl/testssl_{target}.log", target
-    ]
-    
+    command = ['./testssl/testssl.sh','--color', '0', '--ip', 'one' ,'--overwrite', '--warnings', 'off', '--logfile', f'{output_dir}/testssl_{target}.log', target]
     result = subprocess.run(command, capture_output=True, text=True)
     test_vuln = 0
     rating = 0
@@ -185,64 +175,7 @@ def run_testssl_docker(target, output_dir="Test_SSL", port="443"):
         if "non-empty" in result.stderr and "exists" in result.stderr:
             print(f'Testssl.sh error. Please remove the file {os.path.abspath(output_dir)}/testssl_{target}.log')
         else:
-            print(f'Testssl.sh native error: {result.stderr}')
-    return content_to_save_vuln.encode().replace(b"\n\n\n", b"\n").decode(), content_to_save_rating.encode().replace(b"\n\n\n", b"\n").decode()
-
-# Run testssl.sh on the specified target and download the code if not in the local folder
-def run_testssl_native(target, output_dir="Test_SSL", port="443"):
-    # Ensure the output directory exists
-    os.makedirs(output_dir, exist_ok=True)
-
-    if not os.path.exists("./testssl.sh"):
-
-        install_command = [
-            "git", "clone", "--depth", "1",
-            "https://github.com/drwetter/testssl.sh.git"
-        ]
-        subprocess.run(install_command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    
-    if port != "443":
-        target += ":"+port
-
-    command = ['./testssl.sh/testssl.sh','--color', '0', '--ip', 'one' ,'--overwrite', '--warnings', 'off', '--logfile', f'{output_dir}/testssl_{target}.log', target]
-    result = subprocess.run(command, capture_output=True, text=True)
-    test_vuln = 0
-    rating = 0
-    content_to_save_vuln = ""
-    content_to_save_rating = ""
-    is_positive = False
-    if result.returncode >= 0 and os.path.exists(f'{output_dir}/testssl_{target}.log'):
-        file = open(f'{output_dir}/testssl_{target}.log').readlines()
-        for line in file:
-            if 'Could not determine the protocol, only simulating generic clients.' in line:
-                continue
-            if "Testing vulnerabilities" in line:
-                content_to_save_vuln += line
-                test_vuln = 1
-            if "Running client simulations" in line:
-                test_vuln = 0
-            if test_vuln == 1 and "Testing vulnerabilities" not in line:
-                if "(OK)" not in line and len(line) > 1 and line[1].isalpha():
-                    content_to_save_vuln += "[-] " + line
-                    is_positive = False
-                else:
-                    if len(line) > 1 and line[1].isalpha():
-                        is_positive = True
-                    else:
-                        if is_positive == False:
-                            content_to_save_vuln += line
-            if "Rating (experimental)" in line:
-                content_to_save_rating += line
-                rating = 1
-            if rating == 1 and "Rating" not in line:
-                content_to_save_rating += line
-            if "<--" in line:
-                rating = 0
-    else:
-        if "non-empty" in result.stderr and "exists" in result.stderr:
-            print(f'Testssl.sh error. Please remove the file {os.path.abspath(output_dir)}/testssl_{target}.log')
-        else:
-            print(f'Testssl.sh native error: {result.stderr}')
+            print(f'Testssl.sh error: {result.stderr}')
     
     return content_to_save_vuln.encode().replace(b"\n\n\n", b"\n").decode(), content_to_save_rating.encode().replace(b"\n\n\n", b"\n").decode()
 
@@ -499,7 +432,6 @@ def help_menu():
 
     TestSSL Options:  
       -S, --ssl                 Folder name for the SSL check output folder (default: "[PROJECT_FOLDER]/Test_SSL")
-      -St, --scan-type          User either "docker" or "native" to either run a docker container for the testssl or run it from binary.
     
     Header Check Options:
       -He, --header-folder     Folder name for the HTTP header check (default: "[PROJECT_FOLDER]/Headers_Check")
