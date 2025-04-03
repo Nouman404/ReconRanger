@@ -33,7 +33,7 @@ sudo pip3 install -r requirements.txt
 ## Docker Install
 
 ```bash
-git clone https://github.com/Nouman404/ReconRanger.git
+git clone --recursive https://github.com/Nouman404/ReconRanger.git
 cd ReconRanger
 sudo docker build -t reconranger .
 ```
