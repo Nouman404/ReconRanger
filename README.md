@@ -30,15 +30,63 @@ sudo pip3 install -r requirements.txt
 
 > Note that you have to run the pip install in sudo. This is due to the way the program runs. The nmap in UDP mode needs sudo rights so to be able to scan a lot of IPs/domains the whole process runs in sudo. If not, you would be asked to retype the password and may need to stay in front of your computer...
 
-## Docker Install
+## Podman Install
+
+Best install since it doesn't require root privileges is by using podman:
 
 ```bash
-git clone https://github.com/Nouman404/ReconRanger.git
+git clone --recursive https://github.com/Nouman404/ReconRanger.git
+cd ReconRanger
+podman build -t reconranger .
+```
+
+## Docker Install
+
+To run this script using docker and without worrying about dependencies, execute the following command:
+```bash
+git clone --recursive https://github.com/Nouman404/ReconRanger.git
 cd ReconRanger
 sudo docker build -t reconranger .
 ```
 
 > If you get any issues when trying the docker build command try restarting your docker service using `sudo systemctl restart docker`
+
+
+## Usage
+
+### Default 
+
+You can use the `--default` or `-D` flag to run the script with default options. The default options are the following:
+- Path of the project (`-p` or `--path`): `./`
+- Project name (`-n` or `--name`): `test_project` 
+- Nmap output folder (`-s` or `--scan-dir`): `[PROJECT_FOLDER]/Nmap_Scans` 
+- Nmap UDP flags (`-sU` or `--udp-flags`): `-vv -Pn --min-rate 1000 -sU --top-ports 1000 -sV -sC -oA [PROJECT_FOLDER]/[NMAP_FOLDER]/nmap_tcp_DOMAIN_OR_IP`
+- Nmap TCP flags (`-sT` or `--tcp-flags`): `-vv -Pn --min-rate 1000 -p- -sV -sC -oA [PROJECT_FOLDER]/[NMAP_FOLDER]/nmap_tcp_DOMAIN_OR_IP`
+- Exlude UDP scans (`-xU`, `--exclude-udp`): `False` (No need to specify True after using this flag)
+- Host file (`-H`, `--host-file`): `./hosts.txt`
+- Test SSL folder (`-S`, `--ssl`): `[PROJECT_FOLDER]/Test_SSL`
+- Header folder (`-He`, `--user-group`): `./Headers_Check`
+
+### Custom
+
+You can modify any of the input used by the program by using the simple flags `-X` or long flags `--XYZ`. Be aware that the flags that can take a string as argument (flags for Nmap TCP/UDP) need the `=` sign to work. So, `-sT -p 10-1000` won't work if you want to scan the port from 10 to 1000. Instead you will have to run `-sT="-p 10-1000"` 
+
+### Exemples
+
+Via your host:
+```bash
+sudo python3 ReconRanger.py -H ../hosts.txt -p ../ -n my_project -xU"
+```
+
+Via podman:
+```bash
+podman run --cap-add NET_RAW --rm -it -v "/home/user/Documents/:/ReconRangerDir/" reconranger -H /ReconRangerDir/hosts.txt -p /ReconRangerDir/ -n my_project -xU
+```
+
+Via docker:
+```bash
+sudo docker run --cap-add NET_RAW --rm -it -v "/home/user/Documents/:/ReconRangerDir/" reconranger -H /ReconRangerDir/hosts.txt -p /ReconRangerDir/ -n my_project -xU
+```
 
 ## Information
 
@@ -132,38 +180,6 @@ If you run the scipt without any parameter or using the `-h` or `--help` flag, y
       python ReconRanger.py -H my_host_file.txt -p ./ -sT="-p 10-1000"
       => Will use the hosts from my_host_file.txt, create the project in the current directory and scan the TCP ports from 10 to 1000
 ```
-
-## Usage
-
-### Default 
-
-You can use the `--default` or `-D` flag to run the script with default options. The default options are the following:
-- Path of the project (`-p` or `--path`): `./`
-- Project name (`-n` or `--name`): `test_project` 
-- Nmap output folder (`-s` or `--scan-dir`): `[PROJECT_FOLDER]/Nmap_Scans` 
-- Nmap UDP flags (`-sU` or `--udp-flags`): `-vv -Pn --min-rate 1000 -sU --top-ports 1000 -sV -sC -oA [PROJECT_FOLDER]/[NMAP_FOLDER]/nmap_tcp_DOMAIN_OR_IP`
-- Nmap TCP flags (`-sT` or `--tcp-flags`): `-vv -Pn --min-rate 1000 -p- -sV -sC -oA [PROJECT_FOLDER]/[NMAP_FOLDER]/nmap_tcp_DOMAIN_OR_IP`
-- Exlude UDP scans (`-xU`, `--exclude-udp`): `False` (No need to specify True after using this flag)
-- Host file (`-H`, `--host-file`): `./hosts.txt`
-- Test SSL folder (`-S`, `--ssl`): `[PROJECT_FOLDER]/Test_SSL`
-- Header folder (`-He`, `--user-group`): `./Headers_Check`
-
-### Custom
-
-You can modify any of the input used by the program by using the simple flags `-X` or long flags `--XYZ`. Be aware that the flags that can take a string as argument (flags for Nmap TCP/UDP) need the `=` sign to work. So, `-sT -p 10-1000` won't work if you want to scan the port from 10 to 1000. Instead you will have to run `-sT="-p 10-1000"` 
-
-### Exemples
-
-Via your host:
-```bash
-sudo python3 ReconRanger.py -H ../hosts.txt -p ../ -n my_project -xU"
-```
-
-Via docker:
-```bash
-sudo docker run --cap-add NET_RAW --rm -it -v "/home/user/Documents/:/ReconRangerDir/" reconranger -H /ReconRangerDir/hosts.txt -p /ReconRangerDir/ -n my_project -xU
-```
-
 ## LICENCE
 
 This project is using a GPL3 licence available [here](https://raw.githubusercontent.com/Nouman404/ReconRanger/main/LICENSE)

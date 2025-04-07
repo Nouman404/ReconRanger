@@ -401,8 +401,8 @@ def extract_open_http_ports(xml_file):
             if state == 'open':
                 # Check if the service is 'http'
                 service = port.find('service')
-                if service.get("name") in ["ssl", "http", "https"]:
-                    if service.get("tunnel") == "ssl":
+                if service.get("name") in ["ssl", "http", "https", "tcpwrapped"]:
+                    if service.get("tunnel") == "ssl" or portid == "443":
                         web_ports.append({"https":portid})
                     else:
                         web_ports.append({"http":portid})
