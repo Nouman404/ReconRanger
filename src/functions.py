@@ -131,13 +131,14 @@ def launch_udp_nmap(target, flags="", folder="Nmap_Scans"):
             launch_udp_nmap(target, flags, folder)
         
 # Run testssl.sh on the specified target 
-def run_testssl(target, output_dir="Test_SSL", port="443"):
+def run_testssl(target, project_path, output_dir="Test_SSL", port="443"):
     # Ensure the output directory exists
     os.makedirs(output_dir, exist_ok=True)
     if port != "443":
         target += ":"+port
+    
+    command = [project_path + '/testssl/testssl.sh','--color', '0', '--ip', 'one' ,'--overwrite', '--warnings', 'off', '--logfile', f'{output_dir}/testssl_{target}.log', target]
 
-    command = ['./testssl/testssl.sh','--color', '0', '--ip', 'one' ,'--overwrite', '--warnings', 'off', '--logfile', f'{output_dir}/testssl_{target}.log', target]
     result = subprocess.run(command, capture_output=True, text=True)
     test_vuln = 0
     rating = 0
@@ -284,7 +285,7 @@ def run_my_header_check(target, my_type="https", output_dir="Headers_Check", por
     final_saved_result += Style.RESET_ALL + Style.BRIGHT + "\n-= End Headers Check =-\n\n"
     
     if check > 0:
-        with open(output_dir+"/header_"+target, "w+") as file:
+        with open(output_dir+"/header_"+target.replace("/","_"), "w+") as file:
             file.write(final_saved_result)
             file.seek(0)
             if len(file.readlines()) == 0:
@@ -335,11 +336,8 @@ def get_cookies_sec(target, my_type="https", port=""):
                         info_cookies += f"\nSameSite: {samesite_final_value} [!] Need to use 'strict' or 'lax'"
                     elif samesite_final_value == "lax":
                         info_cookies += f"\nSameSite: {samesite_final_value} (may be better to use 'strict' value)')"
-
-
                 else:
                     info_cookies += f"\nSameSite: No"
-
                 info_cookies += "\n" + "-" * 48 + "\n\n"
         else:
             return ""

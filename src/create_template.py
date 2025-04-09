@@ -25,13 +25,23 @@ def create_markdown_files(path="./", folder_name="project_name", hosts_file="hos
     if not os.path.exists(hosts_file):
         print("[-] Host file not present")
         exit(1)
-
+    
+    full_URL = ""
+    
     # Read the hosts.txt file
     with open(hosts_file, "r") as file:
         # Read each line from the file
         for line in file:
             # Remove leading and trailing whitespace
             domain = line.strip()
+            # Deal with non domain in hosts file (https://domain or domain/)
+            domain = domain.replace("https://","").replace("http://","")
+            if domain[len(domain)- 1] == "/":
+                domain = domain[:len(domain)- 1]
+            
+            if "/" in domain:
+                full_URL = domain
+                domain = full_URL.split("/")[0]
             
             # Skip empty lines or lines starting with #
             if not domain or domain.startswith("#"):
@@ -69,30 +79,44 @@ def create_markdown_files(path="./", folder_name="project_name", hosts_file="hos
                     https_port = value["https"]
                     spinner_header = Halo(text=f'Header scan started on port {https_port}', spinner='dots')
                     spinner_header.start()
-                    headers += run_my_header_check(target=domain, my_type="https", output_dir=header_folder, port=https_port)
+                    if full_URL != "":
+                        headers += run_my_header_check(target=full_URL, my_type="https", output_dir=header_folder, port=https_port)
+                    else:
+                        headers += run_my_header_check(target=domain, my_type="https", output_dir=header_folder, port=https_port)
                     spinner_header.succeed(f'Header scan ended on port {https_port}')
 
                     spinner_cookie = Halo(text=f'Cookie scan started on port {https_port}', spinner='dots')
                     spinner_cookie.start()
-                    cookies_check_sec += get_cookies_sec(target=domain, my_type="https", port=https_port)
+                    if full_URL != "":
+                        cookies_check_sec += get_cookies_sec(target=full_URL, my_type="https", port=port)
+                    else:
+                        cookies_check_sec += get_cookies_sec(target=domain, my_type="https", port=port)
                     spinner_cookie.succeed(f'Cookie scan ended on port {https_port}')
                 else:
                     if "http" in value:
                         port = value["http"]
                         spinner_header = Halo(text=f'Header scan started on port {port}', spinner='dots')
                         spinner_header.start()
-                        headers += run_my_header_check(target=domain, my_type="http", output_dir=header_folder, port=port)
+                        if full_URL != "":
+                            headers += run_my_header_check(target=full_URL, my_type="http", output_dir=header_folder, port=port)
+                        else:
+                            headers  += run_my_header_check(target=domain, my_type="http", output_dir=header_folder, port=port)
+                        
                         spinner_header.succeed(f'Header scan ended on port {port}')
 
                         spinner_cookie = Halo(text=f'Cookie scan started on port {port}', spinner='dots')
                         spinner_cookie.start()
-                        cookies_check_sec += get_cookies_sec(target=domain, my_type="http", port=port)
+                        if full_URL != "":
+                            cookies_check_sec += get_cookies_sec(target=full_URL, my_type="http", port=port)
+                        else:
+                            cookies_check_sec += get_cookies_sec(target=domain, my_type="http", port=port)
                         spinner_cookie.succeed(f'Cookie scan ended on port {port}')
                 # Run Certificate check on HTTPS
                 if https_port != "":
                     spinner_testSSL = Halo(text=f'TestSSL scan started on port {https_port}', spinner='dots')
                     spinner_testSSL.start()
-                    test_ssl, rating = run_testssl(target=domain, output_dir=ssl_folder, port=https_port)
+                    
+                    test_ssl, rating = run_testssl(target=domain, project_path=os.path.dirname(os.path.abspath(__file__)), output_dir=ssl_folder, port=https_port)
                     spinner_testSSL.succeed(f'TestSSL scan ended on port {https_port}') 
                     if test_ssl != "" or rating != "":
                         full_test_ssl += "\n---------------------\nHTTPS on port " + https_port + "\n---------------------\n" + test_ssl 

@@ -25,7 +25,7 @@ RUN ln -s /usr/bin/hexdump /bin/hexdump
 WORKDIR /ReconRanger
 
 # Copy all local files to /ReconRanger in the container
-COPY . /ReconRanger
+COPY src /ReconRanger
 
 # Install Python dependencies
 RUN pip3 install --no-cache-dir -r /ReconRanger/requirements.txt --break-system-packages
