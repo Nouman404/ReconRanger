@@ -6,7 +6,7 @@ import sys
 from colorama import Fore, Back, Style, init
 import signal
 
-def create_markdown_files(path="./", folder_name="project_name", hosts_file="hosts.txt", scan_folder="Nmap_Scans", udp_flags="" , tcp_flags="", exclude_udp=False, ssl_folder="Test_SSL", header_folder="Headers_Check", user_group=":"):
+def create_markdown_files(path="./", folder_name="ReconRanger_Project", hosts_file="hosts.txt", scan_folder="Nmap_Scans", udp_flags="" , tcp_flags="", exclude_udp=False, ssl_folder="Test_SSL", header_folder="Headers_Check", user_group=":"):
     signal.signal(signal.SIGINT, signal_handler)
 
     # Create the folder if it doesn't exist
@@ -184,14 +184,14 @@ def main():
     parser.add_argument("-h", "--help", action="store_true", help="Show this help message and exit")
     parser.add_argument("-D", "--default", action="store_true", help="Use all default settings")
     parser.add_argument("-p", "--path", default="./", help='Path where to create the report (default: "./")')
-    parser.add_argument("-n", "--name", default="./test_project", help='Name of the project (default: "./test_project")')
-    parser.add_argument("-s", "--scan-dir", default="./Nmap_Scans", help='Folder name for the nmap output folder (default: "./Nmap_Scans")')
+    parser.add_argument("-n", "--name", default="ReconRanger_Project", help='Name of the project (default: "ReconRanger_Project")')
+    parser.add_argument("-s", "--scan-dir", default="Nmap_Scans", help='Folder name for the nmap output folder (default: "Nmap_Scans")')
     parser.add_argument("-sU", "--udp-flags", nargs='+', help='Specify your own nmap flags for UDP scan')
     parser.add_argument("-sT", "--tcp-flags", nargs='+', help='Specify your own nmap flags for TCP scan')
     parser.add_argument("-xU", "--exclude-udp", action="store_true", default="", help='Exclude UDP scan')
     parser.add_argument("-H", "--host-file", default="./hosts.txt", help='Name of the host file (default: "./hosts.txt")')
-    parser.add_argument("-S", "--ssl", default="./Test_SSL", help='Folder name for the SSL check output folder (default: "./Test_SSL")')
-    parser.add_argument("-He", "--header-folder", default="./Headers_Check", help='Folder name for the HTTP header check (default: "./Headers_Check")')
+    parser.add_argument("-S", "--ssl", default="Test_SSL", help='Folder name for the SSL check output folder (default: "Test_SSL")')
+    parser.add_argument("-He", "--header-folder", default="Headers_Check", help='Folder name for the HTTP header check (default: "Headers_Check")')
     parser.add_argument("-U", "--user-group", default="", help='Specify the username and group as user:group')
 
     args = parser.parse_args()

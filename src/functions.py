@@ -419,20 +419,20 @@ def help_menu():
       -D, --default             Use default settings
       -H, --host_file           Name of the host file (default: "./hosts.txt")
       -p, --path                Path where to create the report (default: "./")
-      -n, --name                Name of the project (default: "./test_project")
+      -n, --name                Name of the project (default: "ReconRanger_Project")
       -U --user-group           User and group that will own the folder as user:group
 
     Nmap Options:
-      -s, --scan-dir            Folder name for the nmap output folder (default: "[PROJECT_FOLDER]/Nmap_Scans")
+      -s, --scan-dir            Folder name for the nmap output folder (default: "Nmap_Scans")
       -sU, --udp-flags          Specify your own nmap flags for UDP scan -sU="options1 option2...." (default: "-vv -Pn --min-rate 1000 -sU --top-ports 1000 -sV -sC")
       -sT, --tcp-flags          Specify your own nmap flags for TCP scan as: -sT="options1 option2...." (default: "-vv -Pn --min-rate 1000 -p- -sV -sC")
       -xU, --exclude-udp        Exclude UDP scan from the report (default: False)
 
     TestSSL Options:  
-      -S, --ssl                 Folder name for the SSL check output folder (default: "[PROJECT_FOLDER]/Test_SSL")
+      -S, --ssl                 Folder name for the SSL check output folder (default: "Test_SSL")
     
     Header Check Options:
-      -He, --header-folder     Folder name for the HTTP header check (default: "[PROJECT_FOLDER]/Headers_Check")
+      -He, --header-folder     Folder name for the HTTP header check (default: "Headers_Check")
 
     
 

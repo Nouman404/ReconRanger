@@ -23,6 +23,15 @@ So this script could allow you to scan a lot of domains/IPs and give you Nmap (U
 To be able to run this script use the following command:
 
 ```bash
+sudo apt install git \
+    bash \
+    python3 \
+    py3-pip \
+    sudo \
+    nmap \
+    nmap-scripts \
+    coreutils \
+    procps
 git clone --recursive https://github.com/Nouman404/ReconRanger.git
 cd ReconRanger
 sudo pip3 install -r requirements.txt
@@ -58,14 +67,14 @@ sudo docker build -t reconranger .
 
 You can use the `--default` or `-D` flag to run the script with default options. The default options are the following:
 - Path of the project (`-p` or `--path`): `./`
-- Project name (`-n` or `--name`): `test_project` 
-- Nmap output folder (`-s` or `--scan-dir`): `[PROJECT_FOLDER]/Nmap_Scans` 
-- Nmap UDP flags (`-sU` or `--udp-flags`): `-vv -Pn --min-rate 1000 -sU --top-ports 1000 -sV -sC -oA [PROJECT_FOLDER]/[NMAP_FOLDER]/nmap_tcp_DOMAIN_OR_IP`
-- Nmap TCP flags (`-sT` or `--tcp-flags`): `-vv -Pn --min-rate 1000 -p- -sV -sC -oA [PROJECT_FOLDER]/[NMAP_FOLDER]/nmap_tcp_DOMAIN_OR_IP`
+- Project name (`-n` or `--name`): `ReconRanger_Project` 
+- Nmap output folder (`-s` or `--scan-dir`): `Nmap_Scans` 
+- Nmap UDP flags (`-sU` or `--udp-flags`): `-vv -Pn --min-rate 1000 -sU --top-ports 1000 -sV -sC -oA nmap_tcp_DOMAIN_OR_IP`
+- Nmap TCP flags (`-sT` or `--tcp-flags`): `-vv -Pn --min-rate 1000 -p- -sV -sC -oA nmap_tcp_DOMAIN_OR_IP`
 - Exlude UDP scans (`-xU`, `--exclude-udp`): `False` (No need to specify True after using this flag)
 - Host file (`-H`, `--host-file`): `./hosts.txt`
-- Test SSL folder (`-S`, `--ssl`): `[PROJECT_FOLDER]/Test_SSL`
-- Header folder (`-He`, `--user-group`): `./Headers_Check`
+- Test SSL folder (`-S`, `--ssl`): `test_SSL`
+- Header folder (`-He`, `--header-folder`): `Headers_Check`
 
 ### Custom
 
@@ -82,6 +91,8 @@ Via podman:
 ```bash
 podman run --cap-add NET_RAW --rm -it -v "/home/user/Documents/:/ReconRangerDir/" reconranger -H /ReconRangerDir/hosts.txt -p /ReconRangerDir/ -n my_project -xU
 ```
+
+> If you try scans that need sudo rights (ex: nmap -sS) you may need to run podman with sudo. 
 
 Via docker:
 ```bash
@@ -157,20 +168,20 @@ If you run the scipt without any parameter or using the `-h` or `--help` flag, y
       -h, --help                Show this help message and exit
       -D, --default             Use default settings
       -p, --path                Path where to create the report (default: "./")
-      -n, --name                Name of the project (default: "./test_project")
+      -n, --name                Name of the project (default: "ReconRanger_Project")
       -H, --host_file           Name of the host file (default: "./hosts.txt")
 
     Nmap Options:
-      -s, --scan-dir            Folder name for the nmap output folder (default: "[PROJECT_FOLDER]/Nmap_Scans")
+      -s, --scan-dir            Folder name for the nmap output folder (default: "Nmap_Scans")
       -sU, --udp-flags          Specify your own nmap flags for UDP scan (default: "-vv -Pn --min-rate 1000 -sU --top-ports 1000 -sV -sC")
       -sT, --tcp-flags          Specify your own nmap flags for TCP scan (default: "-vv -Pn --min-rate 1000 -p- -sV -sC")
       -xU, --exclude-udp        Exclude UDP scan from the report (default: False)
 
     TestSSL Options:  
-      -S, --ssl                 Folder name for the SSL check output folder (default: "[PROJECT_FOLDER]/Test_SSL")
+      -S, --ssl                 Folder name for the SSL check output folder (default: "Test_SSL")
     
     Header Check Options:
-      -He, --header-folder     Folder name for the HTTP header check (default: "[PROJECT_FOLDER]/Headers_Check")
+      -He, --header-folder     Folder name for the HTTP header check (default: "Headers_Check")
 
 
     Examples:
