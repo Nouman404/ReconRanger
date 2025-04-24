@@ -34,7 +34,7 @@ sudo apt install git \
     procps
 git clone --recursive https://github.com/Nouman404/ReconRanger.git
 cd ReconRanger
-sudo pip3 install -r requirements.txt
+sudo pip3 install -r src/requirements.txt
 ```
 
 > Note that you have to run the pip install in sudo. This is due to the way the program runs. The nmap in UDP mode needs sudo rights so to be able to scan a lot of IPs/domains the whole process runs in sudo. If not, you would be asked to retype the password and may need to stay in front of your computer...
