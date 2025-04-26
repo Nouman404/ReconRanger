@@ -6,12 +6,13 @@ import subprocess
 import pwd
 import grp
 import sys
+import time
 import xml.etree.ElementTree as ET
 from http.cookies import SimpleCookie
 from colorama import Fore, Back, Style, init
-from halo import Halo
-
-
+from ptyprocess import PtyProcess
+from threading import Thread
+from queue import Queue
 
 def get_current_user_and_group(uid_name='SUDO_UID', gid_name='SUDO_GID'):
     old_uid = int(os.environ[uid_name])
@@ -28,29 +29,66 @@ def change_owner(path, user_group):
     except KeyError as e:
         print(f"Error: {e}")
 
-def signal_handler(sig, frame):
-    spinner = Halo(text=f'Program aborted', spinner='dots')
-    spinner.fail()
-    sys.exit(0)
-
 # Check if the format looks like an IP or not (domain)
 def isIP(value):
     return re.search(r"[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}", value)
 
+def run_with_progress_bar(command, progress_bar, reader = None, reader_args = (), writer = None, writer_args = ()):
+    process = PtyProcess.spawn(command)
+    reader_qu = Queue()
+    process
+
+    def reader_it():
+        while True:
+            line = reader_qu.get()
+            if line is None:
+                break
+
+            yield line
+
+    if reader is not None:
+        reader_th = Thread(target = reader, args = (*reader_args, reader_it(), progress_bar))
+        reader_th.start()
+
+    if writer is not None:
+        writer_th = Thread(target = writer, args = (*writer_args, process))
+        writer_th.start()
+
+    output = ""
+    while True:
+        try:
+            line = process.readline()
+        except EOFError:
+            break
+
+        line = line.decode().strip()
+        reader_qu.put(line)
+        output += line + "\n"
+
+    reader_qu.put(None)
+
+    if reader is not None:
+        reader_th.join()
+
+    if writer is not None:
+        writer_th.join()
+
+    return output
+
 # Run a classic TCP nmap scan
-def launch_tcp_nmap(target, flags="", folder="Nmap_Scans"):
+def launch_tcp_nmap(target, flags="", folder="Nmap_Scans", progress_bar=None):
     nmap_folder = os.path.normpath(folder)
     # Ensure the output directory exists
     os.makedirs(nmap_folder, exist_ok=True)
 
     # Launch basic nmap scan
     if flags == "":
-        arguments='-vv -Pn --min-rate 1000 -p- -sV -sC'
+        arguments='-vv -Pn -n --min-rate 1000 -p- -sV -sC'
     else:
         arguments=flags
 
     if not os.path.exists(nmap_folder + "/nmap_tcp_" + target +".nmap") or not os.path.exists(nmap_folder + "/nmap_tcp_" + target +".xml"):
-        command = ["nmap"]+ arguments.split(" ") 
+        command = ["nmap"]+ arguments.split(" ")
         add_options = None
         add_path = None
         if "-sC" not in arguments or "-sV" not in arguments:
@@ -60,42 +98,41 @@ def launch_tcp_nmap(target, flags="", folder="Nmap_Scans"):
             # Add output
             add_path = ["-oA"]
             add_path.extend([nmap_folder + "/nmap_tcp_" + target])
-            
+
         if add_options is not None:
             command.extend(add_options)
         if add_path is not None:
             command.extend(add_path)
-        
+
         command.extend([target])
-        
-        try:
-            # Run the command and capture the text output
-            result = subprocess.run(command, capture_output=True, text=True)
-            return result.stdout    
-        except subprocess.CalledProcessError as e:
-            print(f"Error! Return Code: {e.returncode}")
-            print(f'Error: {result.stderr}')
+
+        return run_with_progress_bar(command, progress_bar, reader = nmap_reader, reader_args = ("tcp",), writer = nmap_writer)
     else:
         try:
             ET.parse(nmap_folder + "/nmap_tcp_" + target +".xml")
-            return open(nmap_folder + "/nmap_tcp_" + target +".nmap").read()
         except:
             os.remove(nmap_folder + "/nmap_tcp_" + target +".nmap")
             if os.path.exists(nmap_folder + "/nmap_tcp_" + target +".gnmap"):
                 os.remove(nmap_folder + "/nmap_tcp_" + target +".gnmap")
             if os.path.exists(nmap_folder + "/nmap_tcp_" + target +".xml"):
                 os.remove(nmap_folder + "/nmap_tcp_" + target +".xml")
-            launch_tcp_nmap(target, flags, nmap_folder)
+            return launch_tcp_nmap(target, flags, nmap_folder, progress_bar = progress_bar)
+
+        progress_bar.newStep("ports_tcp")
+        progress_bar.newStep("services_tcp")
+        progress_bar.newStep("scripts_tcp")
+
+        return open(nmap_folder + "/nmap_tcp_" + target +".nmap").read()
 
 # Run a classic UDP nmap scan
-def launch_udp_nmap(target, flags="", folder="Nmap_Scans"):
+def launch_udp_nmap(target, flags="", folder="Nmap_Scans", progress_bar=None):
     nmap_folder = os.path.normpath(folder)
     # Ensure the output directory exists
     os.makedirs(folder, exist_ok=True)
 
     # Launch basic nmap scan
     if flags == "":
-        arguments='-vv -Pn --min-rate 1000 -sU --top-ports 1000 -sV -sC'
+        arguments='-vv -Pn -n --min-rate 1000 -sU --top-ports 1000 -sV -sC'
     else:
         arguments=flags
 
@@ -109,43 +146,84 @@ def launch_udp_nmap(target, flags="", folder="Nmap_Scans"):
         if add_path is not None:
             command.extend(add_path)
 
-        command.extend([target])        
-        
-        try:
-            # Run the command and capture the text output
-            result = subprocess.run(command, capture_output=True, text=True)
-            return result.stdout    
-        except subprocess.CalledProcessError as e:
-            print(f"Error! Return Code: {e.returncode}")
-            print(f'Error: {result.stderr}')
+        command.extend([target])
+
+        return run_with_progress_bar(command, progress_bar, reader = nmap_reader, reader_args = ("udp",), writer = nmap_writer)
     else:
         try:
             ET.parse(folder + "/nmap_udp_" + target +".xml")
-            return open(folder + "/nmap_udp_" + target +".nmap").read()
         except:
             os.remove(folder + "/nmap_udp_" + target +".nmap")
             if os.path.exists(folder + "/nmap_udp_" + target +".gnmap"):
                 os.remove(folder + "/nmap_udp_" + target +".gnmap")
             if os.path.exists(folder + "/nmap_udp_" + target +".xml"):
                 os.remove(folder + "/nmap_udp_" + target +".xml")
-            launch_udp_nmap(target, flags, folder)
-        
-# Run testssl.sh on the specified target 
-def run_testssl(target, project_path, output_dir="Test_SSL", port="443"):
+            return launch_udp_nmap(target, flags, folder, progress_bar = progress_bar)
+
+        progress_bar.newStep("ports_udp")
+        progress_bar.newStep("services_udp")
+        progress_bar.newStep("scripts_udp")
+
+        return open(folder + "/nmap_udp_" + target +".nmap").read()
+
+def nmap_reader(proto, lines, progress_bar):
+    regex_new_scan = re.compile(r"^Initiating ([a-zA-Z ]+) at (\d\d:\d\d)$")
+    regex_timing = re.compile(r"^([a-zA-Z ]+) Timing: About ([\d\.]+)% done(?:; ETC: (\d\d:\d\d) \((\d:\d\d:\d\d) remaining\))?$")
+    regex_discovered_port = re.compile(r"^Discovered open port (\d+)/(tcp|udp) on (\d+\.\d+\.\d+\.\d+)$")
+
+    services_processed = False
+    nse_processed = False
+
+    for line in lines:
+        res_new_scan = regex_new_scan.fullmatch(line)
+        if res_new_scan:
+            name = res_new_scan.group(1)
+
+            if name == "Connect Scan" or name == "SYN Stealth Scan":
+                progress_bar.newStep("ports_" + proto)
+            elif name == "Service scan":
+                progress_bar.newStep("services_" + proto)
+                services_processed = True
+            elif name == "NSE" and services_processed and not nse_processed:
+                progress_bar.newStep("scripts_" + proto)
+                nse_processed = True
+
+            continue
+
+        res_timing = regex_timing.fullmatch(line)
+        if res_timing:
+            progress = float(res_timing.group(2))
+            progress_bar.update(progress)
+            continue
+
+        res_discovered_port = regex_discovered_port.fullmatch(line)
+        if res_discovered_port:
+            port = res_discovered_port.group(1)
+            proto = res_discovered_port.group(2)
+            ip = res_discovered_port.group(3)
+            progress_bar.print(f"New {proto} service discovered on {ip}:{port}")
+
+def nmap_writer(process):
+    while not process.eof():
+        time.sleep(1)
+        process.write(b"s")
+
+# Run testssl.sh on the specified target
+def run_testssl(target, project_path, output_dir="Test_SSL", port="443", progress_bar=None):
     # Ensure the output directory exists
     os.makedirs(output_dir, exist_ok=True)
     if port != "443":
         target += ":"+port
-    
-    command = [project_path + '/testssl/testssl.sh','--color', '0', '--ip', 'one' ,'--overwrite', '--warnings', 'off', '--logfile', f'{output_dir}/testssl_{target}.log', target]
 
-    result = subprocess.run(command, capture_output=True, text=True)
+    command = [project_path + '/testssl/testssl.sh','--color', '0', '--ip', 'one' ,'--overwrite', '--warnings', 'off', '--logfile', f'{output_dir}/testssl_{target}.log', target]
+    run_with_progress_bar(command, progress_bar, reader = testssl_reader)
+
     test_vuln = 0
     rating = 0
     content_to_save_vuln = ""
     content_to_save_rating = ""
     is_positive = False
-    if result.returncode >= 0 and os.path.exists(f'{output_dir}/testssl_{target}.log'):
+    if os.path.exists(f'{output_dir}/testssl_{target}.log'):
         file = open(f'{output_dir}/testssl_{target}.log').readlines()
         for line in file:
             if 'Could not determine the protocol, only simulating generic clients.' in line:
@@ -173,12 +251,43 @@ def run_testssl(target, project_path, output_dir="Test_SSL", port="443"):
             if "<--" in line:
                 rating = 0
     else:
-        if "non-empty" in result.stderr and "exists" in result.stderr:
-            print(f'Testssl.sh error. Please remove the file {os.path.abspath(output_dir)}/testssl_{target}.log')
-        else:
-            print(f'Testssl.sh error: {result.stderr}')
-    
+        print(f'Testssl.sh error. Please remove the file {os.path.abspath(output_dir)}/testssl_{target}.log')
+
     return content_to_save_vuln.encode().replace(b"\n\n\n", b"\n").decode(), content_to_save_rating.encode().replace(b"\n\n\n", b"\n").decode()
+
+def testssl_reader(lines, progress_bar):
+    headers = [
+        "Testing protocols via sockets except NPN+ALPN",
+        "Testing cipher categories",
+        "Testing server's cipher preferences",
+        "Testing robust forward secrecy (FS) -- omitting Null Authentication/Encryption, 3DES, RC4",
+        "Testing server defaults (Server Hello)",
+        "Testing HTTP header response @ \"/\"",
+        "Testing vulnerabilities",
+        "Running client simulations (HTTP) via sockets",
+    ]
+
+    times = [5, 14, 21, 33, 65, 69, 71, 88, 117]
+    factor = 1
+    prev_time = 0
+    next_time = times[0]
+    start = time.time()
+
+    for line in lines:
+        t = time.time() - start
+
+        if line in headers:
+            index = headers.index(line)
+            factor = t / times[index]
+            prev_time = times[index]
+            next_time = times[index + 1]
+        else:
+            inner_progress = (t - prev_time * factor) / (next_time - prev_time) * factor
+            if inner_progress > 1:
+                inner_progress = 1
+
+            progress = (prev_time + inner_progress * (next_time - prev_time)) / times[-1]
+            progress_bar.update(progress * 100)
 
 sec_headers = {
     'X-XSS-Protection': 'deprecated',
@@ -242,13 +351,11 @@ def run_my_header_check(target, my_type="https", output_dir="Headers_Check", por
     for cache_key in cache_headers:
         if cache_key not in headers.keys():
             missing_cache_headers.append(cache_key)
-    
-    init(autoreset=True)
 
     # Prepare the display of the result
     final_printed_result = f"-= Missing Headers =-\nTarget: {target}:{port}\n"
     final_saved_result =  Style.BRIGHT + f"-= Missing Headers =-\nTarget: {target}:{port}\n"
-    
+
     check = 0
     if len(missing_sec_headers) != 0:
         final_printed_result += "\nSecurity Headers Missing:\n"
@@ -283,7 +390,7 @@ def run_my_header_check(target, my_type="https", output_dir="Headers_Check", por
 
     final_printed_result += "\n-= End Headers Check =-\n\n"
     final_saved_result += Style.RESET_ALL + Style.BRIGHT + "\n-= End Headers Check =-\n\n"
-    
+
     if check > 0:
         with open(output_dir+"/header_"+target.replace("/","_"), "w+") as file:
             file.write(final_saved_result)
@@ -343,7 +450,7 @@ def get_cookies_sec(target, my_type="https", port=""):
             return ""
     return info_cookies
 
-# Split correctly the cookies 
+# Split correctly the cookies
 def split_set_cookie_headers(header_value):
     cookies = []
     cookie = ""
@@ -378,7 +485,7 @@ def extract_web_ports_from_gnmap(gnmap_file):
                         have_ssl = "http"
                     port = match.split('/')[0]
                     web_ports.append({have_ssl:port})
-    
+
     return web_ports
 
 # Get list of web port (HTTP/HTTPS)
@@ -391,7 +498,7 @@ def extract_open_http_ports(xml_file):
     for port in root.findall('.//port'):
         protocol = port.get('protocol')
         portid = port.get('portid')
-        
+
         # Check if the protocol is 'tcp'
         if protocol == 'tcp':
             # Check if the state is 'open'
@@ -401,9 +508,9 @@ def extract_open_http_ports(xml_file):
                 service = port.find('service')
                 if service.get("name") in ["ssl", "http", "https", "tcpwrapped"]:
                     if service.get("tunnel") == "ssl" or portid == "443":
-                        web_ports.append({"https":portid})
+                        web_ports.append(("https", portid))
                     else:
-                        web_ports.append({"http":portid})
+                        web_ports.append(("http", portid))
     return web_ports
 
 
@@ -428,13 +535,13 @@ def help_menu():
       -sT, --tcp-flags          Specify your own nmap flags for TCP scan as: -sT="options1 option2...." (default: "-vv -Pn --min-rate 1000 -p- -sV -sC")
       -xU, --exclude-udp        Exclude UDP scan from the report (default: False)
 
-    TestSSL Options:  
+    TestSSL Options:
       -S, --ssl                 Folder name for the SSL check output folder (default: "Test_SSL")
-    
+
     Header Check Options:
       -He, --header-folder     Folder name for the HTTP header check (default: "Headers_Check")
 
-    
+
 
     Examples:
       python ReconRanger.py -D
