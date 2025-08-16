@@ -1,15 +1,13 @@
 import requests as r
 import re
-import socket
 import os
 import subprocess
 import pwd
 import grp
-import sys
 import time
 import xml.etree.ElementTree as ET
 from http.cookies import SimpleCookie
-from colorama import Fore, Back, Style, init
+from colorama import Fore, Style
 from ptyprocess import PtyProcess
 from threading import Thread
 from queue import Queue
@@ -36,7 +34,6 @@ def isIP(value):
 def run_with_progress_bar(command, progress_bar, reader = None, reader_args = (), writer = None, writer_args = ()):
     process = PtyProcess.spawn(command)
     reader_qu = Queue()
-    process
 
     def reader_it():
         while True:
@@ -201,7 +198,7 @@ def nmap_reader(proto, lines, progress_bar):
             port = res_discovered_port.group(1)
             proto = res_discovered_port.group(2)
             ip = res_discovered_port.group(3)
-            progress_bar.print(f"New {proto} service discovered on {ip}:{port}")
+            print(f"New {proto} service discovered on {ip}:{port}")
 
 def nmap_writer(process):
     while not process.eof():

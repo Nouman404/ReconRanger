@@ -1,4 +1,4 @@
 colorama
 requests
-tqdm
+rich
 ptyprocess

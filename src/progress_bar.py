@@ -1,41 +1,42 @@
 import re
-from tqdm import tqdm
+from rich.progress import Progress
+
+HOSTS_BAR_COLOR = "red"
+STEPS_BAR_COLOR = "green"
+SUBSTEP_BAR_COLOR = "blue"
 
 class ProgressBar:
     def __init__(self, hosts, steps):
         self.hosts = hosts
         self.steps = steps
 
-        self.hosts_bar = tqdm(total = self.hosts, desc = "Hosts")
+        self.progress = Progress()
+        self.progress.start()
+        self.hosts_bar = self.progress.add_task(f"[{HOSTS_BAR_COLOR}]Hosts", total = self.hosts)
         self.hosts_first = False
-        self.steps_bar = tqdm(total = len(self.steps))
+        self.steps_bar = self.progress.add_task(f"[{STEPS_BAR_COLOR}]", total = len(self.steps))
         self.steps_first = False
-        self.substep_bar = tqdm(total = 1000)
+        self.substep_bar = self.progress.add_task(f"[{SUBSTEP_BAR_COLOR}]", total = 1000)
         self.segments = 1
         self.current_segment = 0
 
     def newHost(self, host):
         if self.hosts_first:
-            self.hosts_bar.update(1)
-            self.hosts_bar.refresh()
+            self.progress.update(self.hosts_bar, advance = 1)
         else:
             self.hosts_first = True
 
-        self.steps_bar.reset()
-        self.steps_bar.set_description("Host " + str(host))
+        self.progress.reset(self.steps_bar, description = f"[{STEPS_BAR_COLOR}]Host {host}")
         self.steps_first = False
-        self.substep_bar.reset()
-        self.substep_bar.set_description("Initialization")
+        self.progress.reset(self.substep_bar, description = f"[{SUBSTEP_BAR_COLOR}]Initialization")
 
     def newStep(self, step, segments = 1):
         if self.steps_first:
-            self.steps_bar.update(1)
-            self.steps_bar.refresh()
+            self.progress.update(self.steps_bar, advance = 1)
         else:
             self.steps_first = True
 
-        self.substep_bar.reset()
-        self.substep_bar.set_description(self.steps[step])
+        self.progress.reset(self.substep_bar, description = f"[{SUBSTEP_BAR_COLOR}]{self.steps[step]}")
         self.segments = segments
         self.current_segment = 0
 
@@ -47,12 +48,12 @@ class ProgressBar:
 
     def update(self, inner_progress):
         progress = (self.current_segment + inner_progress / 100) / self.segments
-        self.substep_bar.update(int(progress * 1000 - self.substep_bar.n))
+        self.progress.update(self.substep_bar, completed = int(progress * 1000))
 
-    def print(self, *args):
-        tqdm.write(" ".join(str(arg) for arg in args))
+    def complete(self):
+        self.progress.update(self.hosts_bar, completed = float("infinity"))
+        self.progress.update(self.steps_bar, visible = False)
+        self.progress.update(self.substep_bar, visible = False)
 
     def end(self):
-        self.hosts_bar.update(self.hosts_bar.total - self.hosts_bar.n)
-        self.steps_bar.update(self.steps_bar.total - self.steps_bar.n)
-        self.substep_bar.update(self.substep_bar.total - self.substep_bar.n)
+        self.progress.stop()

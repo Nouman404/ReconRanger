@@ -69,94 +69,98 @@ def create_markdown_files(path="./", folder_name="ReconRanger_Project", hosts_fi
 
     progress_bar = ProgressBar(len(hosts), steps)
 
-    for host in hosts:
-        domain = host["domain"]
-        full_URL = host["full_URL"]
-        progress_bar.newHost(full_URL)
+    try:
+        for host in hosts:
+            domain = host["domain"]
+            full_URL = host["full_URL"]
+            progress_bar.newHost(full_URL)
 
-        # Run Nmap scan
-        tcp_nmap = launch_tcp_nmap(target=domain, flags=tcp_flags, folder=scan_folder, progress_bar=progress_bar)
-
-        if not exclude_udp:
-            udp_nmap = launch_udp_nmap(target=domain, flags=udp_flags ,folder=scan_folder, progress_bar=progress_bar)
-
-        # Check if a web port is open http and/or https to display or not the "Test HTTP Header" section
-        value_of_web_port = extract_open_http_ports(scan_folder+"/nmap_tcp_"+domain+".xml")
-
-        full_test_ssl = ""
-        full_rating = ""
-        https_ports = [port for proto, port in value_of_web_port if proto == "https"]
-        progress_bar.newStep("tls", segments = len(https_ports))
-        for port in https_ports:
-            test_ssl, rating = run_testssl(target=domain, project_path=os.path.dirname(os.path.abspath(__file__)), output_dir=ssl_folder, port=port, progress_bar=progress_bar)
-
-            if test_ssl != "" or rating != "":
-                full_test_ssl += "\n---------------------\nHTTPS on port " + port + "\n---------------------\n" + test_ssl
-                full_rating += "\n---------------------\nHTTPS on port " + port + "\n---------------------\n" + rating
-                test_ssl = ""
-                rating = ""
-
-            progress_bar.newSegment()
-
-        headers = ""
-        progress_bar.newStep("headers", segments = len(value_of_web_port))
-        for proto, port in value_of_web_port:
-            headers += run_my_header_check(target=full_URL, my_type=proto, output_dir=header_folder, port=port)
-            progress_bar.newSegment()
-
-        cookies_check_sec = ""
-        progress_bar.newStep("cookies", segments = len(value_of_web_port))
-        for proto, port in value_of_web_port:
-            cookies_check_sec += get_cookies_sec(target=full_URL, my_type=proto, port=port)
-            progress_bar.newSegment()
-
-        # Create the markdown file
-        file_name = os.path.join(folder_name, f"{domain}.md")
-        with open(file_name, "w") as md_file:
-            # Write Markdown content to the file
-            md_file.write("- [ ] Finished\n\n\n")
-            md_file.write(f"# {domain}\n\n")
-
-            md_file.write("# TCP\n\n")
-            md_file.write("```")
-            md_file.write(tcp_nmap)
-            md_file.write("```\n\n")
+            # Run Nmap scan
+            tcp_nmap = launch_tcp_nmap(target=domain, flags=tcp_flags, folder=scan_folder, progress_bar=progress_bar)
 
             if not exclude_udp:
-                md_file.write("# UDP\n\n")
+                udp_nmap = launch_udp_nmap(target=domain, flags=udp_flags ,folder=scan_folder, progress_bar=progress_bar)
+
+            # Check if a web port is open http and/or https to display or not the "Test HTTP Header" section
+            value_of_web_port = extract_open_http_ports(scan_folder+"/nmap_tcp_"+domain+".xml")
+
+            full_test_ssl = ""
+            full_rating = ""
+            https_ports = [port for proto, port in value_of_web_port if proto == "https"]
+            progress_bar.newStep("tls", segments = len(https_ports))
+            for port in https_ports:
+                test_ssl, rating = run_testssl(target=domain, project_path=os.path.dirname(os.path.abspath(__file__)), output_dir=ssl_folder, port=port, progress_bar=progress_bar)
+
+                if test_ssl != "" or rating != "":
+                    full_test_ssl += "\n---------------------\nHTTPS on port " + port + "\n---------------------\n" + test_ssl
+                    full_rating += "\n---------------------\nHTTPS on port " + port + "\n---------------------\n" + rating
+                    test_ssl = ""
+                    rating = ""
+
+                progress_bar.newSegment()
+
+            headers = ""
+            progress_bar.newStep("headers", segments = len(value_of_web_port))
+            for proto, port in value_of_web_port:
+                headers += run_my_header_check(target=full_URL, my_type=proto, output_dir=header_folder, port=port)
+                progress_bar.newSegment()
+
+            cookies_check_sec = ""
+            progress_bar.newStep("cookies", segments = len(value_of_web_port))
+            for proto, port in value_of_web_port:
+                cookies_check_sec += get_cookies_sec(target=full_URL, my_type=proto, port=port)
+                progress_bar.newSegment()
+
+            # Create the markdown file
+            file_name = os.path.join(folder_name, f"{domain}.md")
+            with open(file_name, "w") as md_file:
+                # Write Markdown content to the file
+                md_file.write("- [ ] Finished\n\n\n")
+                md_file.write(f"# {domain}\n\n")
+
+                md_file.write("# TCP\n\n")
                 md_file.write("```")
-                md_file.write(udp_nmap)
+                md_file.write(tcp_nmap)
                 md_file.write("```\n\n")
 
-            md_file.write("# FFuF / Gobuster\n\n")
-            md_file.write("```\n\n```\n\n")
+                if not exclude_udp:
+                    md_file.write("# UDP\n\n")
+                    md_file.write("```")
+                    md_file.write(udp_nmap)
+                    md_file.write("```\n\n")
 
-            if headers != "":
-                md_file.write("# Test HTTP Header\n\n")
-                md_file.write("```")
-                md_file.write(headers)
-                md_file.write("```\n\n")
+                md_file.write("# FFuF / Gobuster\n\n")
+                md_file.write("```\n\n```\n\n")
 
-            if full_rating != "":
-                md_file.write("# Test SSL\n\n")
-                md_file.write("```\n")
-                md_file.write(full_rating)
-                md_file.write("```\n\n")
-            if full_test_ssl != "":
-                md_file.write("## SSL Linked CVE\n\n")
-                md_file.write("```\n")
-                md_file.write(full_test_ssl)
-                md_file.write("```\n\n")
+                if headers != "":
+                    md_file.write("# Test HTTP Header\n\n")
+                    md_file.write("```")
+                    md_file.write(headers)
+                    md_file.write("```\n\n")
 
-            if cookies_check_sec != "":
-                md_file.write("# Cookie Misconfigurations\n\n")
-                md_file.write("```\n")
-                md_file.write(cookies_check_sec)
-                md_file.write("```\n\n")
+                if full_rating != "":
+                    md_file.write("# Test SSL\n\n")
+                    md_file.write("```\n")
+                    md_file.write(full_rating)
+                    md_file.write("```\n\n")
+                if full_test_ssl != "":
+                    md_file.write("## SSL Linked CVE\n\n")
+                    md_file.write("```\n")
+                    md_file.write(full_test_ssl)
+                    md_file.write("```\n\n")
 
-            md_file.write("# Vulnerabilities\n\n\n")
+                if cookies_check_sec != "":
+                    md_file.write("# Cookie Misconfigurations\n\n")
+                    md_file.write("```\n")
+                    md_file.write(cookies_check_sec)
+                    md_file.write("```\n\n")
 
-    progress_bar.end()
+                md_file.write("# Vulnerabilities\n\n\n")
+
+        progress_bar.complete()
+
+    finally:
+        progress_bar.end()
 
     if user_group != ":" :
         # Change rights to original user
