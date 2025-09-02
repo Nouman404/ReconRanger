@@ -65,14 +65,15 @@ sudo docker build -t reconranger .
 
 ### Default 
 
-You can use the `--default` or `-D` flag to run the script with default options. The default options are the following:
+You need to specify a host `-H host1,host2...` or a host file that contains several hosts `-Hf hostfile.txt` The default options are the following:
 - Path of the project (`-p` or `--path`): `./`
 - Project name (`-n` or `--name`): `ReconRanger_Project` 
-- Nmap output folder (`-s` or `--scan-dir`): `Nmap_Scans` 
+- Nmap output folder (`-s` or `--scanir`): `Nmap_Scans` 
 - Nmap UDP flags (`-sU` or `--udp-flags`): `-vv -Pn --min-rate 1000 -sU --top-ports 1000 -sV -sC -oA nmap_tcp_DOMAIN_OR_IP`
 - Nmap TCP flags (`-sT` or `--tcp-flags`): `-vv -Pn --min-rate 1000 -p- -sV -sC -oA nmap_tcp_DOMAIN_OR_IP`
 - Exlude UDP scans (`-xU`, `--exclude-udp`): `False` (No need to specify True after using this flag)
-- Host file (`-H`, `--host-file`): `./hosts.txt`
+- Host file (`-Hf`, `--host-file`): ``
+- Host (`-H`, `--host`): ``
 - Test SSL folder (`-S`, `--ssl`): `test_SSL`
 - Header folder (`-He`, `--header-folder`): `Headers_Check`
 
@@ -84,19 +85,19 @@ You can modify any of the input used by the program by using the simple flags `-
 
 Via your host:
 ```bash
-sudo python3 ReconRanger.py -H ../hosts.txt -p ../ -n my_project -xU"
+sudo python3 ReconRanger.py -Hf ../hosts.txt -p ../ -n my_project -xU"
 ```
 
 Via podman:
 ```bash
-podman run --cap-add NET_RAW --rm -it -v "/home/user/Documents/:/ReconRangerDir/" reconranger -H /ReconRangerDir/hosts.txt -p /ReconRangerDir/ -n my_project -xU
+podman run --cap-add NET_RAW --rm -it -v "/home/user/Documents/:/ReconRangerDir/" reconranger -Hf /ReconRangerDir/hosts.txt -p /ReconRangerDir/ -n my_project -xU
 ```
 
 > If you try scans that need sudo rights (ex: nmap -sS) you may need to run podman with sudo. 
 
 Via docker:
 ```bash
-sudo docker run --cap-add NET_RAW --rm -it -v "/home/user/Documents/:/ReconRangerDir/" reconranger -H /ReconRangerDir/hosts.txt -p /ReconRangerDir/ -n my_project -xU
+sudo docker run --cap-add NET_RAW --rm -it -v "/home/user/Documents/:/ReconRangerDir/" reconranger -Hf /ReconRangerDir/hosts.txt -p /ReconRangerDir/ -n my_project -xU
 ```
 
 ## Information
@@ -162,33 +163,37 @@ If you run the scipt without any parameter or using the `-h` or `--help` flag, y
 ```
     Usage: python ReconRanger.py [OPTIONS]
 
-    By default the script will run basic scans (-D). Full scan TCP, top 1000 UDP port, SSL check and header check
+    Run the script with -H or -Hf !
+    
+    This tool will cdo a full scan TCP, top 1000 UDP port, SSL check and header check
 
     Options:
       -h, --help                Show this help message and exit
-      -D, --default             Use default settings
+      -Hf, --host_file          Name of the host file (default: "")
+      -H, --host                Name of the host to scan (default: "")
       -p, --path                Path where to create the report (default: "./")
       -n, --name                Name of the project (default: "ReconRanger_Project")
-      -H, --host_file           Name of the host file (default: "./hosts.txt")
+      -U --user-group           User and group that will own the folder as user:group
 
     Nmap Options:
       -s, --scan-dir            Folder name for the nmap output folder (default: "Nmap_Scans")
-      -sU, --udp-flags          Specify your own nmap flags for UDP scan (default: "-vv -Pn --min-rate 1000 -sU --top-ports 1000 -sV -sC")
-      -sT, --tcp-flags          Specify your own nmap flags for TCP scan (default: "-vv -Pn --min-rate 1000 -p- -sV -sC")
+      -sU, --udp-flags          Specify your own nmap flags for UDP scan -sU="options1 option2...." (default: "-vv -Pn --min-rate 1000 -sU --top-ports 1000 -sV -sC")
+      -sT, --tcp-flags          Specify your own nmap flags for TCP scan as: -sT="options1 option2...." (default: "-vv -Pn --min-rate 1000 -p- -sV -sC")
       -xU, --exclude-udp        Exclude UDP scan from the report (default: False)
 
-    TestSSL Options:  
+    TestSSL Options:
       -S, --ssl                 Folder name for the SSL check output folder (default: "Test_SSL")
-    
+
     Header Check Options:
       -He, --header-folder     Folder name for the HTTP header check (default: "Headers_Check")
 
 
+
     Examples:
-      python ReconRanger.py -D
+      python ReconRanger.py -H "test.com,test2.com"
       => Will run with all default options
 
-      python ReconRanger.py -H my_host_file.txt -p ./ -sT="-p 10-1000"
+      python ReconRanger.py -Hf my_host_file.txt -p ./ -sT="-p 10-1000"
       => Will use the hosts from my_host_file.txt, create the project in the current directory and scan the TCP ports from 10 to 1000
 ```
 ## LICENCE

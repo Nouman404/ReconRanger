@@ -533,12 +533,14 @@ def help_menu():
     help_message = """
     Usage: python ReconRanger.py [OPTIONS]
 
-    By default the script will run basic scans (-D). Full scan TCP, top 1000 UDP port, SSL check and header check
+    \033[91mRun the script with -H OR -Hf !!!\033[0m
+    
+    This tool will cdo a full scan TCP, top 1000 UDP port, SSL check and header check
 
     Options:
       -h, --help                Show this help message and exit
-      -D, --default             Use default settings
-      -H, --host_file           Name of the host file (default: "./hosts.txt")
+      -Hf, --host_file          Name of the host file (default: "")
+      -H, --host                Name of the host to scan (default: "")
       -p, --path                Path where to create the report (default: "./")
       -n, --name                Name of the project (default: "ReconRanger_Project")
       -U --user-group           User and group that will own the folder as user:group
@@ -558,10 +560,10 @@ def help_menu():
 
 
     Examples:
-      python ReconRanger.py -D
+      python ReconRanger.py -H "test.com,test2.com"
       => Will run with all default options
 
-      python ReconRanger.py -H my_host_file.txt -p ./ -sT="-p 10-1000"
+      python ReconRanger.py -Hf my_host_file.txt -p ./ -sT="-p 10-1000"
       => Will use the hosts from my_host_file.txt, create the project in the current directory and scan the TCP ports from 10 to 1000
     """
     print(help_message)

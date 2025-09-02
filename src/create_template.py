@@ -5,7 +5,7 @@ import sys
 from colorama import Fore, Back, Style, init
 from progress_bar import ProgressBar
 
-def create_markdown_files(path="./", folder_name="ReconRanger_Project", hosts_file="hosts.txt", scan_folder="Nmap_Scans", udp_flags="" , tcp_flags="", exclude_udp=False, ssl_folder="Test_SSL", header_folder="Headers_Check", user_group=":"):
+def create_markdown_files(path="./", folder_name="ReconRanger_Project", hosts_file="hosts.txt", host="", scan_folder="Nmap_Scans", udp_flags="" , tcp_flags="", exclude_udp=False, ssl_folder="Test_SSL", header_folder="Headers_Check", user_group=":"):
     # Create the folder if it doesn't exist
     if not os.path.exists(path+"/"+folder_name):
         folder_name = path+"/"+folder_name
@@ -19,37 +19,42 @@ def create_markdown_files(path="./", folder_name="ReconRanger_Project", hosts_fi
     header_folder = os.path.normpath(folder_name + "/"+ header_folder)
     scan_folder = os.path.normpath(folder_name + "/"+ scan_folder)
 
-    if not os.path.exists(hosts_file):
+    if not os.path.exists(hosts_file) and host == "":
         print("[-] Host file not present")
         exit(1)
 
     hosts = []
 
     # Read the hosts.txt file
-    with open(hosts_file, "r") as file:
-        # Read each line from the file
-        for line in file:
-            # Remove leading and trailing whitespace
-            domain = line.strip()
+    if host == "":
+        host_list = open(hosts_file, "r").read()
+        lines = host_list.splitlines()
+    else:
+        host_list = host.split(",")
+        lines = host_list
 
-            # Skip empty lines or lines starting with #
-            if domain == "" or domain.startswith("#"):
-                continue
+    # Read each line from the file
+    for line in lines:
+        # Remove leading and trailing whitespace
+        domain = line.strip()
 
-            # Deal with non domain in hosts file (https://domain or domain/)
-            domain = domain.replace("https://","").replace("http://","")
-            if domain[len(domain)- 1] == "/":
-                domain = domain[:len(domain)- 1]
+        # Skip empty lines or lines starting with #
+        if domain == "" or domain.startswith("#"):
+            continue
 
-            full_URL = domain
-            if "/" in domain:
-                domain = full_URL.split("/")[0]
+        # Deal with non domain in hosts file (https://domain or domain/)
+        domain = domain.replace("https://","").replace("http://","")
+        if domain[len(domain)- 1] == "/":
+            domain = domain[:len(domain)- 1]
 
-            hosts.append({
-                "domain": domain,
-                "full_URL": full_URL
-            })
+        full_URL = domain
+        if "/" in domain:
+            domain = full_URL.split("/")[0]
 
+        hosts.append({
+            "domain": domain,
+            "full_URL": full_URL
+        })
 
     steps = {
         "ports_tcp": "TCP ports scan",
@@ -170,75 +175,77 @@ def create_markdown_files(path="./", folder_name="ReconRanger_Project", hosts_fi
 def main():
     parser = argparse.ArgumentParser(description="Run different scans and write the repport", add_help=False)
     parser.add_argument("-h", "--help", action="store_true", help="Show this help message and exit")
-    parser.add_argument("-D", "--default", action="store_true", help="Use all default settings")
     parser.add_argument("-p", "--path", default="./", help='Path where to create the report (default: "./")')
     parser.add_argument("-n", "--name", default="ReconRanger_Project", help='Name of the project (default: "ReconRanger_Project")')
     parser.add_argument("-s", "--scan-dir", default="Nmap_Scans", help='Folder name for the nmap output folder (default: "Nmap_Scans")')
     parser.add_argument("-sU", "--udp-flags", nargs='+', help='Specify your own nmap flags for UDP scan')
     parser.add_argument("-sT", "--tcp-flags", nargs='+', help='Specify your own nmap flags for TCP scan')
     parser.add_argument("-xU", "--exclude-udp", action="store_true", default="", help='Exclude UDP scan')
-    parser.add_argument("-H", "--host-file", default="./hosts.txt", help='Name of the host file (default: "./hosts.txt")')
+    parser.add_argument("-Hf", "--host-file", default="", help='Name of the host file (default: "")')
+    parser.add_argument("-H", "--host", default="", help='Name of the host to scan (default: "")')
     parser.add_argument("-S", "--ssl", default="Test_SSL", help='Folder name for the SSL check output folder (default: "Test_SSL")')
     parser.add_argument("-He", "--header-folder", default="Headers_Check", help='Folder name for the HTTP header check (default: "Headers_Check")')
     parser.add_argument("-U", "--user-group", default="", help='Specify the username and group as user:group')
     args = parser.parse_args()
     
-    if args.default:
-        create_markdown_files()
+    if args.help or len(sys.argv) == 3 or (len(args.host_file) <= 0 and len(args.host) <= 0) or (len(args.host_file) > 1 and len(args.host) > 1):
+        help_menu()
+    if args.path:
+        output_dir = args.path
     else:
-        if args.help or len(sys.argv) == 3:
-            help_menu()
-        if args.path:
-            output_dir = args.path
-        else:
-            output_dir = "./"
+        output_dir = "./"
 
-        if args.name:
-            project_name = args.name
-        else:
-            project_name = "./test_project"
+    if args.name:
+        project_name = args.name
+    else:
+        project_name = "./test_project"
 
-        if args.scan_dir:
-            scan_dir = args.scan_dir
-        else:
-            scan_dir = "./Nmap_Scans"
+    if args.scan_dir:
+        scan_dir = args.scan_dir
+    else:
+        scan_dir = "./Nmap_Scans"
 
-        if args.tcp_flags:
-            tcp_flags = ' '.join(args.tcp_flags)
-        else:
-            tcp_flags = ""
+    if args.tcp_flags:
+        tcp_flags = ' '.join(args.tcp_flags)
+    else:
+        tcp_flags = ""
 
-        if args.udp_flags:
-            udp_flags = ' '.join(args.udp_flags)
-        else:
-            udp_flags = ""
+    if args.udp_flags:
+        udp_flags = ' '.join(args.udp_flags)
+    else:
+        udp_flags = ""
 
-        if args.exclude_udp:
-            exclude_udp = True
-        else:
-            exclude_udp = False
+    if args.exclude_udp:
+        exclude_udp = True
+    else:
+        exclude_udp = False
 
-        if args.host_file:
-            host_file = args.host_file
-        else:
-            host_file = "./hosts.txt"
+    if args.host_file:
+        host_file = args.host_file
+    else:
+        host_file = "./hosts.txt"
 
-        if args.ssl:
-            ssl_folder = args.ssl
-        else:
-            ssl_folder = "./Test_SSL"
+    if args.host:
+        host = args.host
+    else:
+        host = ""
 
-        if args.header_folder:
-            header_folder = args.header_folder
-        else:
-            header_folder = "./Headers_Check"
+    if args.ssl:
+        ssl_folder = args.ssl
+    else:
+        ssl_folder = "./Test_SSL"
 
-        if args.user_group:
-            user_group = args.user_group
-        else:
-            user_group = ":"
+    if args.header_folder:
+        header_folder = args.header_folder
+    else:
+        header_folder = "./Headers_Check"
 
-    create_markdown_files(path=output_dir, folder_name=project_name, hosts_file=host_file, scan_folder=scan_dir, udp_flags=udp_flags, tcp_flags=tcp_flags, exclude_udp=exclude_udp, ssl_folder=ssl_folder, header_folder=header_folder, user_group=user_group)
+    if args.user_group:
+        user_group = args.user_group
+    else:
+        user_group = ":"
+
+    create_markdown_files(path=output_dir, folder_name=project_name, hosts_file=host_file, host=host, scan_folder=scan_dir, udp_flags=udp_flags, tcp_flags=tcp_flags, exclude_udp=exclude_udp, ssl_folder=ssl_folder, header_folder=header_folder, user_group=user_group)
 
 if __name__ == "__main__":
     main()
