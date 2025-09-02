@@ -120,13 +120,13 @@ def create_markdown_files(path="./", folder_name="ReconRanger_Project", hosts_fi
 
                 md_file.write("# TCP\n\n")
                 md_file.write("```")
-                md_file.write(tcp_nmap)
+                md_file.write(nmap_verbose_output(tcp_nmap))
                 md_file.write("```\n\n")
 
                 if not exclude_udp:
                     md_file.write("# UDP\n\n")
                     md_file.write("```")
-                    md_file.write(udp_nmap)
+                    md_file.write(nmap_verbose_output(udp_nmap))
                     md_file.write("```\n\n")
 
                 md_file.write("# FFuF / Gobuster\n\n")
@@ -181,8 +181,8 @@ def main():
     parser.add_argument("-S", "--ssl", default="Test_SSL", help='Folder name for the SSL check output folder (default: "Test_SSL")')
     parser.add_argument("-He", "--header-folder", default="Headers_Check", help='Folder name for the HTTP header check (default: "Headers_Check")')
     parser.add_argument("-U", "--user-group", default="", help='Specify the username and group as user:group')
-
     args = parser.parse_args()
+    
     if args.default:
         create_markdown_files()
     else:

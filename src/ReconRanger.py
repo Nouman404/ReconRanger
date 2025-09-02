@@ -1,5 +1,6 @@
 import os
 import sys
+import create_template
 
 # Get the directory where ReconRanger is located
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -40,9 +41,6 @@ for flag in sys.argv[1:]:
             list_flags += "'" + flag + "' "
         else:
             list_flags += flag + " "
-command = f'python3 "{script_dir}/{target_script_path}" -U {user_name}:{group_name} {list_flags}'
-exit_code = os.system(command)
+sys.argv =  f"{script_dir}/{target_script_path} -U {user_name}:{group_name} {list_flags}".split()
 
-if exit_code != 0:
-    print(f"Script execution failed with exit code {exit_code}")
-    exit()
+create_template.main()

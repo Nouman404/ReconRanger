@@ -502,14 +502,31 @@ def extract_open_http_ports(xml_file):
             state = port.find('state').get('state')
             if state == 'open':
                 # Check if the service is 'http'
-                service = port.find('service')
-                if service.get("name") in ["ssl", "http", "https", "tcpwrapped"]:
-                    if service.get("tunnel") == "ssl" or portid == "443":
-                        web_ports.append(("https", portid))
-                    else:
-                        web_ports.append(("http", portid))
+                try:
+                    service = port.find('service')
+                    if service.get("name") in ["ssl", "http", "https", "tcpwrapped"]:
+                        if service.get("tunnel") == "ssl" or portid == "443":
+                            web_ports.append(("https", portid))
+                        else:
+                            web_ports.append(("http", portid))
+                except:
+                    continue
+                
     return web_ports
 
+# Manage Nmap verbose output
+def nmap_verbose_output(nmap_file_content):
+    passed = 0
+    lines = nmap_file_content.splitlines()
+    # Always take the first line
+    nmap_output = lines[0] + "\n"
+    
+    # Skip until "Nmap scan report for"
+    for line in lines[1:-3]:
+        if line.startswith("Nmap scan report for") or passed == 1:
+            nmap_output += line + "\n"
+            passed = 1
+    return nmap_output
 
 # Print the help menu
 def help_menu():
