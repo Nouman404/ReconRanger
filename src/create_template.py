@@ -5,7 +5,53 @@ import sys
 from colorama import Fore, Back, Style, init
 from progress_bar import ProgressBar
 
-def create_markdown_files(path="./", folder_name="ReconRanger_Project", hosts_file="hosts.txt", host="", scan_folder="Nmap_Scans", udp_flags="" , tcp_flags="", exclude_udp=False, ssl_folder="Test_SSL", header_folder="Headers_Check", user_group=":"):
+def create_markdown_files(path="./", folder_name="ReconRanger_Project", hosts_file="hosts.txt", host="", scan_folder="Nmap_Scans", udp_flags="" , tcp_flags="", exclude_udp=False, ssl_folder="Test_SSL", header_folder="Headers_Check", user_group=":", podman=False, docker=False):
+    
+    if podman or docker:
+        path = "/ReconRanger/"
+        save_folder = "/ReconRanger_Project/"
+        src_folder = sys.argv[0].replace("/create_template.py","")
+        root_folder = sys.argv[0].replace("src/create_template.py","")
+
+        folder_map = {
+            hosts_file:    os.path.join(save_folder, os.path.basename(hosts_file)),
+            folder_name:   os.path.join(save_folder, os.path.basename(folder_name)),
+            ssl_folder:    os.path.join(folder_name + "/", os.path.basename(ssl_folder)),
+            header_folder: os.path.join(folder_name + "/", os.path.basename(header_folder)),
+            scan_folder:   os.path.join(folder_name + "/", os.path.basename(scan_folder)),
+        }
+        if ".." in hosts_file:
+            print("\033[91m[-] You cannot use ../ in host file path when using Docker/Podman mode\033[0m")
+            exit(1)
+        if not os.path.exists(root_folder + hosts_file):
+            print(f"\033[91m[-] Host file not present in {root_folder}\033[0m")
+            exit(1)
+
+        new_arg_list = []
+        for arg in sys.argv[1:]:
+            replaced = folder_map.get(arg, arg)
+            if ":" in replaced:
+                replaced = ":"
+            if arg == "-P":
+                continue
+            if " " in replaced:
+                new_arg_list.append("'" + replaced + "'")
+            else:
+                new_arg_list.append(replaced)
+
+        if podman:
+            runner = "podman"
+        else:
+            runner = "sudo docker"    
+        build_command = f'{runner} build -t reconranger {root_folder}'.split()
+        subprocess.run(build_command)
+        
+        run_command = f'{runner} run --cap-add NET_RAW --log-level=warning --rm -it -v {root_folder}:{save_folder} -v {src_folder}:{path} reconranger {" ".join(new_arg_list)}'.split()
+        subprocess.run(run_command)
+
+        print(f"\033[92m[+] Scan ended and result saved in\033[0m {src_folder}")
+        exit(0)
+
     # Create the folder if it doesn't exist
     if not os.path.exists(path+"/"+folder_name):
         folder_name = path+"/"+folder_name
@@ -20,7 +66,7 @@ def create_markdown_files(path="./", folder_name="ReconRanger_Project", hosts_fi
     scan_folder = os.path.normpath(folder_name + "/"+ scan_folder)
 
     if not os.path.exists(hosts_file) and host == "":
-        print("[-] Host file not present")
+        print("\033[91m[-] Host file not present\033[0m")
         exit(1)
 
     hosts = []
@@ -186,6 +232,8 @@ def main():
     parser.add_argument("-S", "--ssl", default="Test_SSL", help='Folder name for the SSL check output folder (default: "Test_SSL")')
     parser.add_argument("-He", "--header-folder", default="Headers_Check", help='Folder name for the HTTP header check (default: "Headers_Check")')
     parser.add_argument("-U", "--user-group", default="", help='Specify the username and group as user:group')
+    parser.add_argument("-P", "--podman", action="store_true", default="", help='Use ReconRanger in a Podman container')
+    parser.add_argument("-D", "--docker", action="store_true", default="", help='Use ReconRanger in a Docker container')
     args = parser.parse_args()
     
     if args.help or len(sys.argv) == 3 or (len(args.host_file) <= 0 and len(args.host) <= 0) or (len(args.host_file) > 1 and len(args.host) > 1):
@@ -245,7 +293,17 @@ def main():
     else:
         user_group = ":"
 
-    create_markdown_files(path=output_dir, folder_name=project_name, hosts_file=host_file, host=host, scan_folder=scan_dir, udp_flags=udp_flags, tcp_flags=tcp_flags, exclude_udp=exclude_udp, ssl_folder=ssl_folder, header_folder=header_folder, user_group=user_group)
+    if args.podman:
+        podman = True
+    else:
+        podman = False
+
+    if args.docker:
+        docker = True
+    else:
+        docker = False
+
+    create_markdown_files(path=output_dir, folder_name=project_name, hosts_file=host_file, host=host, scan_folder=scan_dir, udp_flags=udp_flags, tcp_flags=tcp_flags, exclude_udp=exclude_udp, ssl_folder=ssl_folder, header_folder=header_folder, user_group=user_group, podman=podman, docker=docker)
 
 if __name__ == "__main__":
     main()

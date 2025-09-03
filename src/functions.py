@@ -543,13 +543,15 @@ def help_menu():
       -H, --host                Name of the host to scan (default: "")
       -p, --path                Path where to create the report (default: "./")
       -n, --name                Name of the project (default: "ReconRanger_Project")
-      -U --user-group           User and group that will own the folder as user:group
+      -U, --user-group          User and group that will own the folder as user:group
+      -P, --podman              Use ReconRanger in a Podman container
+      -D, --docker              Use ReconRanger in a Docker container
 
     Nmap Options:
       -s, --scan-dir            Folder name for the nmap output folder (default: "Nmap_Scans")
       -sU, --udp-flags          Specify your own nmap flags for UDP scan -sU="options1 option2...." (default: "-vv -Pn --min-rate 1000 -sU --top-ports 1000 -sV -sC")
       -sT, --tcp-flags          Specify your own nmap flags for TCP scan as: -sT="options1 option2...." (default: "-vv -Pn --min-rate 1000 -p- -sV -sC")
-      -xU, --exclude-udp        Exclude UDP scan from the report (default: False)
+      -xU, --exclude-udp        Exclude UDP scan from the report
 
     TestSSL Options:
       -S, --ssl                 Folder name for the SSL check output folder (default: "Test_SSL")
