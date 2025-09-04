@@ -2,54 +2,58 @@ import os
 from functions import *
 import argparse
 import sys
-from colorama import Fore, Back, Style, init
 from progress_bar import ProgressBar
+import shlex
 
 def create_markdown_files(path="./", folder_name="ReconRanger_Project", hosts_file="hosts.txt", host="", scan_folder="Nmap_Scans", udp_flags="" , tcp_flags="", exclude_udp=False, ssl_folder="Test_SSL", header_folder="Headers_Check", user_group=":", podman=False, docker=False):
     
     if podman or docker:
-        path = "/ReconRanger/"
-        save_folder = "/ReconRanger_Project/"
-        src_folder = sys.argv[0].replace("/create_template.py","")
         root_folder = sys.argv[0].replace("src/create_template.py","")
+        container_path = "/ouptut"
 
-        folder_map = {
-            hosts_file:    os.path.join(save_folder, os.path.basename(hosts_file)),
-            folder_name:   os.path.join(save_folder, os.path.basename(folder_name)),
-            ssl_folder:    os.path.join(folder_name + "/", os.path.basename(ssl_folder)),
-            header_folder: os.path.join(folder_name + "/", os.path.basename(header_folder)),
-            scan_folder:   os.path.join(folder_name + "/", os.path.basename(scan_folder)),
-        }
         if ".." in hosts_file:
             print("\033[91m[-] You cannot use ../ in host file path when using Docker/Podman mode\033[0m")
             exit(1)
-        if not os.path.exists(root_folder + hosts_file):
-            print(f"\033[91m[-] Host file not present in {root_folder}\033[0m")
+        if not os.path.exists(path + hosts_file):
+            print(f"\033[91m[-] Host file not present in {path}\033[0m")
             exit(1)
-
-        new_arg_list = []
-        for arg in sys.argv[1:]:
-            replaced = folder_map.get(arg, arg)
-            if ":" in replaced:
-                replaced = ":"
-            if arg == "-P":
-                continue
-            if " " in replaced:
-                new_arg_list.append("'" + replaced + "'")
-            else:
-                new_arg_list.append(replaced)
 
         if podman:
             runner = "podman"
         else:
-            runner = "sudo docker"    
-        build_command = f'{runner} build -t reconranger {root_folder}'.split()
-        subprocess.run(build_command)
-        
-        run_command = f'{runner} run --cap-add NET_RAW --log-level=warning --rm -it -v {root_folder}:{save_folder} -v {src_folder}:{path} reconranger {" ".join(new_arg_list)}'.split()
-        subprocess.run(run_command)
+            runner = "sudo docker"
 
-        print(f"\033[92m[+] Scan ended and result saved in\033[0m {src_folder}")
+        if host != "" and not hosts_file:
+            hostvar = f"-H {host}"
+        elif hosts_file != "" and host == "":
+            hostvar = f"-Hf {os.path.join(container_path, os.path.basename(hosts_file))}"
+        else:
+            print("\033[91m[-] You need to specify either a host file or a host\033[0m")
+            exit(1)
+
+        new_arg_list = runner.split()
+        new_arg_list += ["run", "--cap-add", "NET_RAW", "--rm", "-it", "-v", f"{path}:{container_path}", "reconranger",
+                        "-p", f"{container_path}",
+                        "-n", f"{folder_name}",
+                        hostvar.split()[0], hostvar.split()[1],
+                        "-s", f"{scan_folder}",
+                        "-S", f"{ssl_folder}",
+                        "-He", f"{header_folder}"
+                        ]
+        if udp_flags != "":
+            new_arg_list += ["-sU", f'"{udp_flags}"']
+        if tcp_flags != "":
+            new_arg_list += ["-sT", f'"{tcp_flags}"']
+        if exclude_udp:
+            new_arg_list += ["-xU"]
+        run_command = new_arg_list
+        try:
+            subprocess.run(run_command, check=True)
+        except Exception as e:
+            print(f"\033[91m[-] Error running the container\n[-] Don't forget to build the container with the command:\n\033[0m\033[93m{runner} build -t reconranger .\033[0m")
+            exit(1)
+        saved_path = os.path.join(path, folder_name)
+        print(f"\033[92m[+] Scan ended and result saved in\033[0m {saved_path}")
         exit(0)
 
     # Create the folder if it doesn't exist
