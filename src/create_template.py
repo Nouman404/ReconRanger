@@ -3,49 +3,42 @@ from functions import *
 import argparse
 import sys
 from progress_bar import ProgressBar
-import shlex
 
 def create_markdown_files(path="./", folder_name="ReconRanger_Project", hosts_file="hosts.txt", host="", scan_folder="Nmap_Scans", udp_flags="" , tcp_flags="", exclude_udp=False, ssl_folder="Test_SSL", header_folder="Headers_Check", user_group=":", podman=False, docker=False):
-    
+
     if podman or docker:
-        root_folder = sys.argv[0].replace("src/create_template.py","")
         container_path = "/ouptut"
 
-        if ".." in hosts_file:
-            print("\033[91m[-] You cannot use ../ in host file path when using Docker/Podman mode\033[0m")
-            exit(1)
-        if not os.path.exists(path + hosts_file):
-            print(f"\033[91m[-] Host file not present in {path}\033[0m")
-            exit(1)
-
         if podman:
-            runner = "podman"
+            runner = ["podman"]
         else:
-            runner = "sudo docker"
+            runner = ["sudo", "docker"]
+
+        runner_args = ["--cap-add", "NET_RAW", "--rm", "-it", "-v", f"{path}:{container_path}"]
 
         if host != "" and not hosts_file:
-            hostvar = f"-H {host}"
+            hostvar = ["-H", host],
         elif hosts_file != "" and host == "":
-            hostvar = f"-Hf {os.path.join(container_path, os.path.basename(hosts_file))}"
+            runner_args.extend(["-v", f"{hosts_file}:/hosts.txt"])
+            hostvar = ["-Hf", "/hosts.txt"],
         else:
             print("\033[91m[-] You need to specify either a host file or a host\033[0m")
             exit(1)
 
-        new_arg_list = runner.split()
-        new_arg_list += ["run", "--cap-add", "NET_RAW", "--rm", "-it", "-v", f"{path}:{container_path}", "reconranger",
+        new_arg_list = [*runner, "run", *runner_args, "reconranger",
                         "-p", f"{container_path}",
                         "-n", f"{folder_name}",
-                        hostvar.split()[0], hostvar.split()[1],
+                        *hostvar,
                         "-s", f"{scan_folder}",
                         "-S", f"{ssl_folder}",
                         "-He", f"{header_folder}"
                         ]
         if udp_flags != "":
-            new_arg_list += ["-sU", f'"{udp_flags}"']
+            new_arg_list.extend(["-sU", f'"{udp_flags}"'])
         if tcp_flags != "":
-            new_arg_list += ["-sT", f'"{tcp_flags}"']
+            new_arg_list.extend(["-sT", f'"{tcp_flags}"'])
         if exclude_udp:
-            new_arg_list += ["-xU"]
+            new_arg_list.extend(["-xU"])
         run_command = new_arg_list
         try:
             subprocess.run(run_command, check=True)
@@ -239,7 +232,7 @@ def main():
     parser.add_argument("-P", "--podman", action="store_true", default="", help='Use ReconRanger in a Podman container')
     parser.add_argument("-D", "--docker", action="store_true", default="", help='Use ReconRanger in a Docker container')
     args = parser.parse_args()
-    
+
     if args.help or len(sys.argv) == 3 or (len(args.host_file) <= 0 and len(args.host) <= 0) or (len(args.host_file) > 1 and len(args.host) > 1):
         help_menu()
     if args.path:
