@@ -212,7 +212,7 @@ def run_testssl(target, project_path, output_dir="Test_SSL", port="443", progres
     if port != "443":
         target += ":"+port
 
-    command = [project_path + '/testssl/testssl.sh','--color', '0', '--ip', 'one' ,'--overwrite', '--warnings', 'off', '--logfile', f'{output_dir}/testssl_{target}.log', target]
+    command = [project_path + '/testssl/testssl.sh','--color', '0','--overwrite', '--warnings', 'off', '--logfile', f'{output_dir}/testssl_{target}.log', target]
     run_with_progress_bar(command, progress_bar, reader = testssl_reader)
 
     test_vuln = 0
