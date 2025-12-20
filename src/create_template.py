@@ -2,10 +2,53 @@ import os
 from functions import *
 import argparse
 import sys
-from colorama import Fore, Back, Style, init
 from progress_bar import ProgressBar
 
-def create_markdown_files(path="./", folder_name="ReconRanger_Project", hosts_file="hosts.txt", host="", scan_folder="Nmap_Scans", udp_flags="" , tcp_flags="", exclude_udp=False, ssl_folder="Test_SSL", header_folder="Headers_Check", user_group=":"):
+def create_markdown_files(path="./", folder_name="ReconRanger_Project", hosts_file="hosts.txt", host="", scan_folder="Nmap_Scans", udp_flags="" , tcp_flags="", exclude_udp=False, ssl_folder="Test_SSL", header_folder="Headers_Check", user_group=":", podman=False, docker=False):
+
+    if podman or docker:
+        container_path = "/ouptut"
+
+        if podman:
+            runner = ["podman"]
+        else:
+            runner = ["sudo", "docker"]
+
+        runner_args = ["--cap-add", "NET_RAW", "--rm", "-it", "-v", f"{path}:{container_path}"]
+
+        if host != "" and not hosts_file:
+            hostvar = ["-H", host],
+        elif hosts_file != "" and host == "":
+            runner_args.extend(["-v", f"{hosts_file}:/hosts.txt"])
+            hostvar = ["-Hf", "/hosts.txt"],
+        else:
+            print("\033[91m[-] You need to specify either a host file or a host\033[0m")
+            exit(1)
+
+        new_arg_list = [*runner, "run", *runner_args, "reconranger",
+                        "-p", f"{container_path}",
+                        "-n", f"{folder_name}",
+                        *hostvar,
+                        "-s", f"{scan_folder}",
+                        "-S", f"{ssl_folder}",
+                        "-He", f"{header_folder}"
+                        ]
+        if udp_flags != "":
+            new_arg_list.extend(["-sU", f'"{udp_flags}"'])
+        if tcp_flags != "":
+            new_arg_list.extend(["-sT", f'"{tcp_flags}"'])
+        if exclude_udp:
+            new_arg_list.extend(["-xU"])
+        run_command = new_arg_list
+        try:
+            subprocess.run(run_command, check=True)
+        except Exception as e:
+            print(f"\033[91m[-] Error running the container\n[-] Don't forget to build the container with the command:\n\033[0m\033[93m{runner} build -t reconranger .\033[0m")
+            exit(1)
+        saved_path = os.path.join(path, folder_name)
+        print(f"\033[92m[+] Scan ended and result saved in\033[0m {saved_path}")
+        exit(0)
+
     # Create the folder if it doesn't exist
     if not os.path.exists(path+"/"+folder_name):
         folder_name = path+"/"+folder_name
@@ -20,7 +63,7 @@ def create_markdown_files(path="./", folder_name="ReconRanger_Project", hosts_fi
     scan_folder = os.path.normpath(folder_name + "/"+ scan_folder)
 
     if not os.path.exists(hosts_file) and host == "":
-        print("[-] Host file not present")
+        print("\033[91m[-] Host file not present\033[0m")
         exit(1)
 
     hosts = []
@@ -186,8 +229,10 @@ def main():
     parser.add_argument("-S", "--ssl", default="Test_SSL", help='Folder name for the SSL check output folder (default: "Test_SSL")')
     parser.add_argument("-He", "--header-folder", default="Headers_Check", help='Folder name for the HTTP header check (default: "Headers_Check")')
     parser.add_argument("-U", "--user-group", default="", help='Specify the username and group as user:group')
+    parser.add_argument("-P", "--podman", action="store_true", default="", help='Use ReconRanger in a Podman container')
+    parser.add_argument("-D", "--docker", action="store_true", default="", help='Use ReconRanger in a Docker container')
     args = parser.parse_args()
-    
+
     if args.help or len(sys.argv) == 3 or (len(args.host_file) <= 0 and len(args.host) <= 0) or (len(args.host_file) > 1 and len(args.host) > 1):
         help_menu()
     if args.path:
@@ -245,7 +290,17 @@ def main():
     else:
         user_group = ":"
 
-    create_markdown_files(path=output_dir, folder_name=project_name, hosts_file=host_file, host=host, scan_folder=scan_dir, udp_flags=udp_flags, tcp_flags=tcp_flags, exclude_udp=exclude_udp, ssl_folder=ssl_folder, header_folder=header_folder, user_group=user_group)
+    if args.podman:
+        podman = True
+    else:
+        podman = False
+
+    if args.docker:
+        docker = True
+    else:
+        docker = False
+
+    create_markdown_files(path=output_dir, folder_name=project_name, hosts_file=host_file, host=host, scan_folder=scan_dir, udp_flags=udp_flags, tcp_flags=tcp_flags, exclude_udp=exclude_udp, ssl_folder=ssl_folder, header_folder=header_folder, user_group=user_group, podman=podman, docker=docker)
 
 if __name__ == "__main__":
     main()
