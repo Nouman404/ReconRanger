@@ -4,7 +4,7 @@ import argparse
 import sys
 from progress_bar import ProgressBar
 
-def create_markdown_files(path="./", folder_name="ReconRanger_Project", hosts_file="hosts.txt", host="", scan_folder="Nmap_Scans", udp_flags="" , tcp_flags="", exclude_udp=False, ssl_folder="Test_SSL", header_folder="Headers_Check", user_group=":", podman=False, docker=False):
+def create_markdown_files(path="./", folder_name="ReconRanger_Project", hosts_file="", host="", scan_folder="Nmap_Scans", udp_flags="" , tcp_flags="", exclude_udp=False, ssl_folder="Test_SSL", header_folder="Headers_Check", user_group=":", podman=False, docker=False):
 
     if podman or docker:
         container_path = "/ouptut"
@@ -15,12 +15,11 @@ def create_markdown_files(path="./", folder_name="ReconRanger_Project", hosts_fi
             runner = ["sudo", "docker"]
 
         runner_args = ["--cap-add", "NET_RAW", "--rm", "-it", "-v", f"{path}:{container_path}"]
-
+        
         if host != "" and not hosts_file:
-            hostvar = ["-H", host],
+            hostvar = "-H", f"{host}"
         elif hosts_file != "" and host == "":
-            runner_args.extend(["-v", f"{hosts_file}:/hosts.txt"])
-            hostvar = ["-Hf", "/hosts.txt"],
+            hostvar = "-Hf", f"/{container_path}/hosts.txt"
         else:
             print("\033[91m[-] You need to specify either a host file or a host\033[0m")
             exit(1)
@@ -28,7 +27,7 @@ def create_markdown_files(path="./", folder_name="ReconRanger_Project", hosts_fi
         new_arg_list = [*runner, "run", *runner_args, "reconranger",
                         "-p", f"{container_path}",
                         "-n", f"{folder_name}",
-                        *hostvar,
+                        hostvar[0], hostvar[1],
                         "-s", f"{scan_folder}",
                         "-S", f"{ssl_folder}",
                         "-He", f"{header_folder}"
@@ -40,13 +39,12 @@ def create_markdown_files(path="./", folder_name="ReconRanger_Project", hosts_fi
         if exclude_udp:
             new_arg_list.extend(["-xU"])
         run_command = new_arg_list
+        
         try:
             subprocess.run(run_command, check=True)
         except Exception as e:
-            print(f"\033[91m[-] Error running the container\n[-] Don't forget to build the container with the command:\n\033[0m\033[93m{runner} build -t reconranger .\033[0m")
+            print(f"\033[91m[-] Error running the container\n[-] Don't forget to build the container with the command (inside the ReconRanger directory):\n\033[0m\033[93m{' '.join(runner)} build -t reconranger .\033[0m")
             exit(1)
-        saved_path = os.path.join(path, folder_name)
-        print(f"\033[92m[+] Scan ended and result saved in\033[0m {saved_path}")
         exit(0)
 
     # Create the folder if it doesn't exist
@@ -128,17 +126,14 @@ def create_markdown_files(path="./", folder_name="ReconRanger_Project", hosts_fi
 
             if not exclude_udp:
                 udp_nmap = launch_udp_nmap(target=domain, flags=udp_flags ,folder=scan_folder, progress_bar=progress_bar)
-
             # Check if a web port is open http and/or https to display or not the "Test HTTP Header" section
             value_of_web_port = extract_open_http_ports(scan_folder+"/nmap_tcp_"+domain+".xml")
-
             full_test_ssl = ""
             full_rating = ""
             https_ports = [port for proto, port in value_of_web_port if proto == "https"]
             progress_bar.newStep("tls", segments = len(https_ports))
             for port in https_ports:
                 test_ssl, rating = run_testssl(target=domain, project_path=os.path.dirname(os.path.abspath(__file__)), output_dir=ssl_folder, port=port, progress_bar=progress_bar)
-
                 if test_ssl != "" or rating != "":
                     full_test_ssl += "\n---------------------\nHTTPS on port " + port + "\n---------------------\n" + test_ssl
                     full_rating += "\n---------------------\nHTTPS on port " + port + "\n---------------------\n" + rating
@@ -146,7 +141,6 @@ def create_markdown_files(path="./", folder_name="ReconRanger_Project", hosts_fi
                     rating = ""
 
                 progress_bar.newSegment()
-
             headers = ""
             progress_bar.newStep("headers", segments = len(value_of_web_port))
             for proto, port in value_of_web_port:
@@ -213,6 +207,9 @@ def create_markdown_files(path="./", folder_name="ReconRanger_Project", hosts_fi
     if user_group != ":" :
         # Change rights to original user
         change_owner(folder_name, user_group)
+    
+    saved_path = os.path.join(path, folder_name)
+    print(f"\033[92m[+] Scan ended and result saved in\033[0m {saved_path}")
     exit(0)
 
 def main():
@@ -268,7 +265,7 @@ def main():
     if args.host_file:
         host_file = args.host_file
     else:
-        host_file = "./hosts.txt"
+        host_file = ""
 
     if args.host:
         host = args.host

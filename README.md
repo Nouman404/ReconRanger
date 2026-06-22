@@ -76,6 +76,8 @@ You need to specify a host `-H host1,host2...` or a host file that contains seve
 - Host (`-H`, `--host`): ``
 - Test SSL folder (`-S`, `--ssl`): `test_SSL`
 - Header folder (`-He`, `--header-folder`): `Headers_Check`
+- Run the scan inside a podman image ('-P', '--podman')
+- Run the scan inside a docker image ('-D', '--docker')
 
 ### Custom
 
