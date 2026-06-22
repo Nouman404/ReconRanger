@@ -117,6 +117,7 @@ def create_markdown_files(path="./", folder_name="ReconRanger_Project", hosts_fi
 
     try:
         for host in hosts:
+            print("\n\033[93m[~] Starting scan for host:\033[0m", host["domain"])
             domain = host["domain"]
             full_URL = host["full_URL"]
             progress_bar.newHost(full_URL)
@@ -198,6 +199,7 @@ def create_markdown_files(path="./", folder_name="ReconRanger_Project", hosts_fi
                     md_file.write("```\n\n")
 
                 md_file.write("# Vulnerabilities\n\n\n")
+            
 
         progress_bar.complete()
 
